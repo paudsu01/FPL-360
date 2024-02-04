@@ -1,0 +1,2 @@
+class AppropriateDivNotDetectedException(Exception):
+    pass
