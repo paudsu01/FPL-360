@@ -29,5 +29,6 @@
       "run_at": "document_end"
     }
   ],
-  "host_permissions": ["<all_urls>"]
+  "host_permissions": ["<all_urls>"],
+  "permissions": ["tabs"]
 }

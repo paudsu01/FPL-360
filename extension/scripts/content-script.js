@@ -11,6 +11,8 @@ var TEAM_AWAY_DICT={};
 var TEAM_JERSEY_LINK_DICT={};
 // Team name to team code
 var TEAM_NAME_TO_CODE_DICT={};
+// Type of url : "transfers", "my-team" and "event"
+var URL_CODE = '';
 
 // Functions
 function waitForElement(){
@@ -98,14 +100,27 @@ function create_team_name_id_code_dict(all_info_dict){
 
 function find_chosen_gameweek(all_info_dict){
 
-    // check url
-
     let all_gameweeks = all_info_dict["events"];
     for (let gameweek of all_gameweeks){
         if (gameweek["is_current"] === true){
             CHOSEN_GAMEWEEK = gameweek["id"];
             break;
         }
+    }
+
+    // check url
+    let url = window.location.href;
+    if (url.endsWith("my-team")){
+        URL_CODE = "my-team"
+        CHOSEN_GAMEWEEK += 1;
+    } else if (url.endsWith("transfers")){
+        CHOSEN_GAMEWEEK += 1;
+        URL_CODE = "transfers"
+    } else {
+        URL_CODE = "event";
+        let url_pieces = url.split('/');
+        CHOSEN_GAMEWEEK = url_pieces[url_pieces.length-1];
+        console.log(CHOSEN_GAMEWEEK);
     }
 
 }
@@ -124,6 +139,15 @@ async function create_team_name_away_fixture_dict(){
 }
 
 async function main(){
+
+    // return if not proper entry url
+    if (window.location.href.includes("entry")){
+        var re = new RegExp("^https?://fantasy\.premierleague\.com/entry/[0-9]*/event/[0-9]{1,2}$");
+        if (!re.test(window.location.href)){
+            console.log("not valid page to inject content-script")
+            return;
+        }
+    }
 
     try {
     let [awayResponse, bootstrapResponse] = await Promise.all([
