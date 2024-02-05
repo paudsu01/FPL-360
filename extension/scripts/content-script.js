@@ -1,7 +1,8 @@
+console.log("content-script loaded")
 // Variables declaration
 
-// current gameweek 
-var CURRENT_GAMEWEEK=-1;
+// chosen gameweek 
+var CHOSEN_GAMEWEEK=-1;
 // Team id to name(teamn code e.g ARS for arsenal)
 var ID_TEAM_DICT={};
 // Team code to true if away fixture in current gameweek else false
@@ -12,14 +13,34 @@ var TEAM_JERSEY_LINK_DICT={};
 var TEAM_NAME_TO_CODE_DICT={};
 
 // Functions
+function waitForElement(){
+
+    return new Promise((resolve, reject)=>{
+
+        if (document.querySelector("[data-testid='pitch']")) {
+            resolve();
+        } else {
+
+            const observer = new MutationObserver(mutations => {
+                if (document.querySelector("[data-testid='pitch']")) {
+                    observer.disconnect();
+                    resolve();
+                }
+            });
+    
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+    }
+
+    )
+}
 function swapKits(){
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
-    // page hasn't loaded completely, set a timeout
-    if (pitchElement === null){
-        setTimeout(1, swapKits)
-        return;
-    }
 
     // the player jersey boxes in the website are inside button tags
     // 30 button tags : 2 for each player
@@ -28,16 +49,20 @@ function swapKits(){
 
     // Necessary to alternate between button tags
     // loop over buttons with index 2,4,...
+
     let all_buttons = pitchElement.querySelectorAll("button");
+
     for (let currentIndex=2; currentIndex < all_buttons.length; currentIndex += 2){
         
+        // index 22 is for the bench goalie
+        if (currentIndex == 22) continue;
+
         let sourceElement= all_buttons[currentIndex].querySelector("source");
         let imgElement = all_buttons[currentIndex].querySelector("img");
         let teamName = imgElement.getAttribute("alt");
         let teamCode = TEAM_NAME_TO_CODE_DICT[teamName];
 
-
-        if (TEAM_AWAY_DICT[teamCode] === true){
+        if (teamCode in TEAM_AWAY_DICT && TEAM_AWAY_DICT[teamCode] === true){
             // Modify attributes to handle re-sizing of the window for these images
             let jerseyLink = TEAM_JERSEY_LINK_DICT[teamCode]
             // remove everything after .png in the link
@@ -71,12 +96,14 @@ function create_team_name_id_code_dict(all_info_dict){
     }
 }
 
-function find_current_gameweek(all_info_dict){
+function find_chosen_gameweek(all_info_dict){
+
+    // check url
 
     let all_gameweeks = all_info_dict["events"];
     for (let gameweek of all_gameweeks){
         if (gameweek["is_current"] === true){
-            CURRENT_GAMEWEEK = gameweek["id"];
+            CHOSEN_GAMEWEEK = gameweek["id"];
             break;
         }
     }
@@ -85,7 +112,7 @@ function find_current_gameweek(all_info_dict){
 
 async function create_team_name_away_fixture_dict(){
 
-    let response = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${CURRENT_GAMEWEEK}`)
+    let response = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
     let fixtures = await response.json();
     for (let fixture of fixtures){
         let home_team = ID_TEAM_DICT[fixture["team_h"]];
@@ -113,14 +140,22 @@ async function main(){
      // a dict that maps from team name to team code
      create_team_name_id_code_dict(bootstrapResponse);
     
-     // get current gameweek
-     find_current_gameweek(bootstrapResponse);
+     // if url is points then get gameweek from url
+     // if pick team then use api to get chosen gameweek
+
+     // get chosen gameweek
+     find_chosen_gameweek(bootstrapResponse);
 
      // make a dict that maps from teamName to away fixture value(true if the team has a next away fixture else false)
      create_team_name_away_fixture_dict();
 
-     // Swap kits if needed after windows gets loaded
-     window.onload = swapKits;
+     // Swap kits if needed after element discovered
+     waitForElement().then(()=>{
+        swapKits();
+     })
+
+     // add event listeners to run main function if user clicks on (my-page, points)
+     
 
     } catch (err){
         console.log(err);
