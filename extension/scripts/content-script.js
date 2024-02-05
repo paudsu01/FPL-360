@@ -1,4 +1,3 @@
-console.log("content-script loaded")
 // Variables declaration
 
 // chosen gameweek 
@@ -13,6 +12,8 @@ var TEAM_JERSEY_LINK_DICT={};
 var TEAM_NAME_TO_CODE_DICT={};
 // Type of url : "transfers", "my-team" and "event"
 var URL_CODE = '';
+// window.location.href value when content-script is loaded
+var CURRENT_URL = window.location.href;
 
 // Functions
 function waitForElement(){
@@ -120,7 +121,6 @@ function find_chosen_gameweek(all_info_dict){
         URL_CODE = "event";
         let url_pieces = url.split('/');
         CHOSEN_GAMEWEEK = url_pieces[url_pieces.length-1];
-        console.log(CHOSEN_GAMEWEEK);
     }
 
 }
@@ -138,16 +138,46 @@ async function create_team_name_away_fixture_dict(){
     
 }
 
+function check_if_url_is_a_valid_link(){
+
+    let url = window.location.href;
+    let my_team_re = new RegExp("^https?://fantasy\.premierleague\.com/my-team$")
+    let transfer_re = new RegExp("^https?://fantasy\.premierleague\.com/transfers$")
+    let event_re = new RegExp("^https?://fantasy\.premierleague\.com/entry/[0-9]*/event/[0-9]{1,2}$");
+
+    if (my_team_re.test(url) || transfer_re.test(url) || event_re.test(url)){
+        return true;
+    }
+    // all other links are invalid ( no need to inject content-scripts into them)
+    return false;
+
+}
+function setup_mutation_listener_for_url_change(){
+
+  const config = { attributes: false, childList: true, subtree: true }
+
+  const observer = new MutationObserver(()=>{
+    if (window.location.href != CURRENT_URL){
+
+        CURRENT_URL = window.location.href;
+        main();
+
+    }
+  })
+
+  observer.observe(document.body, config)
+
+}
 async function main(){
 
     // return if not proper entry url
-    if (window.location.href.includes("entry")){
-        var re = new RegExp("^https?://fantasy\.premierleague\.com/entry/[0-9]*/event/[0-9]{1,2}$");
-        if (!re.test(window.location.href)){
-            console.log("not valid page to inject content-script")
-            return;
-        }
+    is_a_proper_link = check_if_url_is_a_valid_link()
+    if (!is_a_proper_link){
+        console.log("no need to inject");
+        return;
     }
+
+    console.log("need to inject yes");
 
     try {
     let [awayResponse, bootstrapResponse] = await Promise.all([
@@ -185,5 +215,10 @@ async function main(){
         console.log(err);
     }
 }
+
+// add mutation listener to run this function again if the route changes
+// This is necessary because content-script won't get loaded again as websites like this
+// use Javascript frameworks and Ajax calls to only update parts of the existing webpage content as the user navigates around the site
+window.onload = setup_mutation_listener_for_url_change;
 
 main();

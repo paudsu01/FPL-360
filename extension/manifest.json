@@ -15,19 +15,9 @@
   "content_scripts": [
     {
       "js": ["scripts/content-script.js"],
-      "matches": ["https://fantasy.premierleague.com/my-team"],
-      "run_at": "document_start"
-    },
-    {
-      "js": ["scripts/content-script.js"],
-      "matches": ["https://fantasy.premierleague.com/transfers"],
-      "run_at": "document_start"
-    },
-    {
-      "js": ["scripts/content-script.js"],
-      "matches": ["https://fantasy.premierleague.com/entry/*"],
+      "matches": ["https://fantasy.premierleague.com/*"],
       "run_at": "document_end"
-    }
+    } 
   ],
   "host_permissions": ["<all_urls>"],
   "permissions": ["tabs"]
