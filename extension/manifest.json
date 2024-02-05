@@ -26,7 +26,7 @@
     {
       "js": ["scripts/content-script.js"],
       "matches": ["https://fantasy.premierleague.com/entry/*"],
-      "run_at": "document_start"
+      "run_at": "document_end"
     }
   ],
   "host_permissions": ["<all_urls>"]

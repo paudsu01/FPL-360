@@ -15,6 +15,12 @@ var TEAM_NAME_TO_CODE_DICT={};
 function swapKits(){
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
+    // page hasn't loaded completely, set a timeout
+    if (pitchElement === null){
+        setTimeout(1, swapKits)
+        return;
+    }
+
     // the player jersey boxes in the website are inside button tags
     // 30 button tags : 2 for each player
 
@@ -25,12 +31,31 @@ function swapKits(){
     let all_buttons = pitchElement.querySelectorAll("button");
     for (let currentIndex=2; currentIndex < all_buttons.length; currentIndex += 2){
         
+        let sourceElement= all_buttons[currentIndex].querySelector("source");
         let imgElement = all_buttons[currentIndex].querySelector("img");
         let teamName = imgElement.getAttribute("alt");
         let teamCode = TEAM_NAME_TO_CODE_DICT[teamName];
 
+
         if (TEAM_AWAY_DICT[teamCode] === true){
-            imgElement.setAttribute("src", TEAM_JERSEY_LINK_DICT[teamCode])
+            // Modify attributes to handle re-sizing of the window for these images
+            let jerseyLink = TEAM_JERSEY_LINK_DICT[teamCode]
+            // remove everything after .png in the link
+            jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
+
+            // srcset is of the type
+            // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
+
+            // image dimensions
+            // 66w : 66 x 87
+            // 110w : 110 x 145
+            // 220w : 220 x 290
+
+            let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
+            sourceElement.setAttribute("srcset", srcsetAttribute);
+            imgElement.setAttribute("srcset", srcsetAttribute)
+
+            imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
         }
 
     }
