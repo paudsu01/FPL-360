@@ -6,7 +6,7 @@ var CHOSEN_GAMEWEEK=-1;
 var ID_TEAM_DICT={};
 // Team code to true if away fixture in current gameweek else false
 var TEAM_AWAY_DICT={};
-// Team code to link for away jersey
+// Team code to link for home and away jersey
 var TEAM_JERSEY_LINK_DICT={};
 // Team name to team code
 var TEAM_NAME_TO_CODE_DICT={};
@@ -18,22 +18,23 @@ var CURRENT_URL = window.location.href;
 var BOOTSTRAP_RESPONSE;
 
 // Functions
-function waitForElement(){
+function waitForElement(parentElement, selector){
 
     return new Promise((resolve, reject)=>{
 
-        if (document.querySelector("[data-testid='pitch']")) {
+        if (parentElement.querySelector(selector)) {
             resolve();
         } else {
 
             const observer = new MutationObserver(mutations => {
-                if (document.querySelector("[data-testid='pitch']")) {
+                if (parentElement.querySelector(selector)) {
                     observer.disconnect();
                     resolve();
                 }
             });
     
-            observer.observe(document.body, {
+            observer.observe(parentElement, {
+                attributes: true,
                 childList: true,
                 subtree: true
             });
@@ -43,50 +44,84 @@ function waitForElement(){
 
     )
 }
-function swapKits(){
+function get_increment_second_goalie_indexes(){
+    if (URL_CODE == "event"){
+        return [2, 2, 22]
+    } else if (URL_CODE == "my-team"){
+        return [3, 3, 33]  
+    } else {
+        return [3, 3, 3]
+    }
+}
+
+async function check_if_away_jersey_needed(playerButtonElement, teamCode){
+
+        let awayJerseyNeeded = false;
+
+        if (URL_CODE == 'event' || URL_CODE == 'transfers'){
+            if (teamCode in TEAM_AWAY_DICT && TEAM_AWAY_DICT[teamCode] === true){
+                // Modify attributes to handle re-sizing of the window for these images
+                awayJerseyNeeded = true;
+            }
+        } else {
+
+            // only pick first team if double gameweek
+            await waitForElement(playerButtonElement, "span")
+            let oppositionTeam = playerButtonElement.querySelector("span").innerText.split(',')[0];
+            let pattern = new RegExp(/\([HA]\)/);
+            let matches = oppositionTeam.match(pattern);
+            if (matches && matches[0] == '(A)'){
+                awayJerseyNeeded = true;
+            }
+        }
+
+        return awayJerseyNeeded
+
+}
+async function swapKits(){
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
-
     // the player jersey boxes in the website are inside button tags
-    // 30 button tags : 2 for each player
-
-    // Skip goalkeeper buttons(index 0 and 1)
-
-    // Necessary to alternate between button tags
-    // loop over buttons with index 2,4,...
-
     let all_buttons = pitchElement.querySelectorAll("button");
 
-    for (let currentIndex=2; currentIndex < all_buttons.length; currentIndex += 2){
+    // for points page:  30 button tags : 2 for each player
+    // for transfers and my-team page:  45 button tags : 3 for each player
+    // Skip goalkeeper buttons(indexes 0 and 1 for points, 0-2 for the rest)
+    let [startValue, incrementValue, secondGoalieValue] = get_increment_second_goalie_indexes();
+
+    // Necessary to avoid unnecessary between button tags including buttons for second goalie
+    // loop over buttons with index 2,4,... for points page
+    // loop over buttons with index 3,6,... for transfers, my-team page
+   for (let currentIndex=startValue; currentIndex < all_buttons.length; currentIndex += incrementValue){
         
         // index 22 is for the bench goalie
-        if (currentIndex == 22) continue;
+        if (currentIndex == secondGoalieValue) continue;
 
         let sourceElement= all_buttons[currentIndex].querySelector("source");
         let imgElement = all_buttons[currentIndex].querySelector("img");
         let teamName = imgElement.getAttribute("alt");
         let teamCode = TEAM_NAME_TO_CODE_DICT[teamName];
 
-        if (teamCode in TEAM_AWAY_DICT && TEAM_AWAY_DICT[teamCode] === true){
-            // Modify attributes to handle re-sizing of the window for these images
-            let jerseyLink = TEAM_JERSEY_LINK_DICT[teamCode]
-            // remove everything after .png in the link
-            jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
+        let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
+        let jerseyLink = away_jersey_needed ? TEAM_JERSEY_LINK_DICT[teamCode]["away"] : TEAM_JERSEY_LINK_DICT[teamCode]["home"]
+        
 
-            // srcset is of the type
-            // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
+        // remove everything after .png in the link
+        jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
 
-            // image dimensions
-            // 66w : 66 x 87
-            // 110w : 110 x 145
-            // 220w : 220 x 290
+        // srcset is of the type
+        // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
 
-            let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
-            sourceElement.setAttribute("srcset", srcsetAttribute);
-            imgElement.setAttribute("srcset", srcsetAttribute)
+        // image dimensions
+        // 66w : 66 x 87
+        // 110w : 110 x 145
+        // 220w : 220 x 290
 
-            imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
-        }
+        let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
+        sourceElement.setAttribute("srcset", srcsetAttribute);
+        imgElement.setAttribute("srcset", srcsetAttribute)
+
+        imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
 
     }
 
@@ -127,7 +162,7 @@ function find_chosen_gameweek(all_info_dict){
 
 }
 
-async function create_team_name_away_fixture_dict(){
+async function fetch_team_name_away_fixture_dict_and_swap_kits(){
 
     let response = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
     let fixtures = await response.json();
@@ -138,6 +173,10 @@ async function create_team_name_away_fixture_dict(){
         TEAM_AWAY_DICT[away_team] = true;
     }
     
+     // Swap kits if needed after element discovered
+     waitForElement(document.body, "[data-testid='pitch']").then(()=>{
+        swapKits();
+     })
 }
 
 function check_if_url_is_a_valid_link(){
@@ -175,7 +214,7 @@ async function initContentScript(){
     try {
     let [awayResponse, bootstrapResponse] = await Promise.all([
         // link to get team name and away jersey link
-        fetch("https://paudsu01.github.io/FPL-360/extension/FPL-AWAY.json"),
+        fetch("https://paudsu01.github.io/FPL-360/extension/FPL-HOME-AWAY.json"),
         // link to get info for current gameweek and team name and their appropriate ids
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
 
@@ -212,15 +251,17 @@ function main(){
      find_chosen_gameweek(BOOTSTRAP_RESPONSE);
 
      // make a dict that maps from teamName to away fixture value(true if the team has a next away fixture else false)
-     create_team_name_away_fixture_dict();
-
-     // Swap kits if needed after element discovered
-     waitForElement().then(()=>{
+     // and call the swapKits function after done ( The swapKits function is inside this function since the function is async and 
+     // we need the fixture dict ready before we swap kits)
+     if (URL_CODE != "my-team"){
+        fetch_team_name_away_fixture_dict_and_swap_kits();
+     } else {
+        // Swap kits if needed after element discovered
+        waitForElement(document.body,"[data-testid='pitch']").then(()=>{
         swapKits();
      })
-
-     // add event listeners to run main function if user clicks on (my-page, points)
     }
+}
 
 // add mutation listener to run this function again if the route changes
 // This is necessary because content-script won't get loaded again as websites like this
