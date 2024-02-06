@@ -33,30 +33,37 @@ def parse_response(html: str) -> Dict[str, str]:
 
     # Get team name from img link
 
-    div_elements = main_div.find_all("div",
-                                     class_="history-kits__club__kit--awaykit")
+    away_div_elements = main_div.find_all("div",
+                                          class_="history-kits__club__kit--awaykit")
+    home_div_elements = main_div.find_all("div",
+                                          class_="history-kits__club__kit--homekit")
+
     team_jersey_dict = {}
 
-    for div_element in div_elements:
+    for away_div_element, home_div_element in zip(away_div_elements,
+                                                  home_div_elements):
 
-        jersey_link = div_element.find("img")["src"]
+        away_jersey_link = away_div_element.find("img")["src"]
+        home_jersey_link = home_div_element.find("img")["src"]
         # pattern matches something like match='ARS_2324_AK_PL_S1.png'
         pattern = re.compile("[A-Z]{3}[^/]*.png")
         
         # just get the first three letters from that name
-        teamName = pattern.search(jersey_link)[0][:3]
+        teamName = pattern.search(away_jersey_link)[0][:3]
 
-        team_jersey_dict[teamName] = jersey_link
+        team_jersey_dict[teamName] = {}
+        team_jersey_dict[teamName]["away"] = away_jersey_link
+        team_jersey_dict[teamName]["home"] = home_jersey_link
     
     return team_jersey_dict
         
 
-def save_as_json(team_away_jersey_dict: Dict[str, str]) -> None:
+def save_as_json(team_jersey_dict: Dict[str, str]) -> None:
 
-    json_dict = json.dumps(team_away_jersey_dict, indent=2)
+    json_dict = json.dumps(team_jersey_dict, indent=2)
     PATH_TO_ROOT_DIRECTORY = os.path.dirname(os.path.dirname(__file__))
     PATH_TO_JSON = os.path.join(PATH_TO_ROOT_DIRECTORY,
-                                'extension/FPL-AWAY.json')
+                                'extension/FPL-HOME-AWAY.json')
 
     with open(PATH_TO_JSON, 'w') as outfile:
         outfile.write(json_dict)
@@ -87,7 +94,7 @@ if __name__ == "__main__":
             "Div element with the provided class name not detected")
 
     # parse the html recieved with beautifulSoup and lxml parser
-    team_away_jersey_dict = parse_response(driver.page_source)
+    team_jersey_dict = parse_response(driver.page_source)
 
     # save the dict as json 
-    save_as_json(team_away_jersey_dict)
+    save_as_json(team_jersey_dict)

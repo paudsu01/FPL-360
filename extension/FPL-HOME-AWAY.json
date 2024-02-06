@@ -1,0 +1,82 @@
+{
+  "ARS": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/08290777-016d-4634-8d02-47bfb5e3ad66/ARS_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/c7176975-7020-41b7-bb1b-e2e1dbeb7b68/ARS_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "AVL": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/76672435-c930-47b9-9f44-913dc2c6b9a8/AVL_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/75ac0bfd-7ca5-4166-81df-f5cc086852b3/AVL_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "BOU": {
+    "away": "https://resources.premierleague.com/photos/2023/08/21/76fa21c6-1c73-4dc6-974f-d884dd24dfbd/BOU_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/21/f5b9457f-459b-4468-a34f-88864e7d1273/BOU_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "BRE": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/fc10f3ae-1d00-4eb7-a5ce-29cbc69e1cf0/BRE_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/b10fdb30-f163-4fb4-a05d-3c8d405e976d/BRE_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "BHA": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/2d8e7b39-88c5-43d6-b1e7-b20f6e3f52cb/BHA_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/0895296e-ba76-43ea-9aac-5368425d040b/BHA_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "BUR": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/b3b994b8-62d0-4aac-a5b4-ac3d76a59e19/BUR_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/e1d1da8f-bf8c-4c13-95c8-42f5d71b7eb3/BUR_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "CHE": {
+    "away": "https://resources.premierleague.com/photos/2023/10/16/26512063-5b5e-4080-a56a-a7d73f03a23c/CHE_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/10/16/e02e41b0-e64e-4fab-a498-3a8c1418ff74/CHE_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "CRY": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/93575703-7c23-4fdc-bb30-dfc9ee9b5497/CRY_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/83875bf5-9ef7-4fc4-b011-99a893d60f8d/CRY_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "EVE": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/d0b11cd1-8fb4-44c0-8a5d-d3615d1b630f/EVE_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/5090ee91-b024-4c55-8c8c-b8af48606c0d/EVE_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "FUL": {
+    "away": "https://resources.premierleague.com/photos/2023/09/27/e1d01e59-ba54-465f-a7e7-c60860e712e7/FUL_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/21/0fc51bc0-e7e5-4059-b043-1e84d3dc7592/FUL_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "LIV": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/362ca7fd-78eb-44cf-bec1-5998d1bebadc/LIV_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/4bd336bd-9719-40d7-b4bd-3b767c63809c/LIV_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "LUT": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/774a9b77-2a3c-4a03-a782-f6761b8c6910/LUT_2324_TK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/5a45bd9c-412c-485e-9ea1-3438eae4c952/LUT_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "MCI": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/b0f8b8bf-7538-41b2-8695-c1cde772f53e/MCI_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/205fc2bd-3bb9-4239-8e49-b87647cb9e0b/MCI_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "MUN": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/7f6abc6f-07f8-4625-a27d-6565a9a991c4/MUN_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/25e8c2d0-b14f-4a3b-9e6f-cc8410b906c0/MUN_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "NEW": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/07b789ec-3667-48f4-9209-d8a1a2673b9a/NEW_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/ec93272d-9e11-457c-830a-4cb9afcd6c35/NEW_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "NFO": {
+    "away": "https://resources.premierleague.com/photos/2023/08/31/e56bbe36-a9ab-42ac-92b4-b6e1443fd66d/NFO_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/31/4c5c83f5-f93a-40ac-9319-6653faebbc77/NFO_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "SHU": {
+    "away": "https://resources.premierleague.com/photos/2023/09/13/bb691c58-26f3-45fa-8437-d5ca2902c630/SHU_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/09/13/8f1f00a6-4f1b-43d8-ab4c-fd415e58d9d4/SHU_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "TOT": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/341d3d4a-3296-4e41-a661-abc350a2bb5f/TOT_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/e6d9b79f-8bdd-4af6-851e-3f2308ea1010/TOT_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "WHU": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/fe7f0617-5806-44cc-be01-f6325464293b/WHU_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/99cec219-3b71-4386-873b-52092ffb7d16/WHU_2324_HK_PL_S1.png?width=235&height=310"
+  },
+  "WOL": {
+    "away": "https://resources.premierleague.com/photos/2023/08/20/b55b7f25-c3b2-4ed6-8bff-b393e3ef324f/WOL_2324_AK_PL_S1.png?width=235&height=310",
+    "home": "https://resources.premierleague.com/photos/2023/08/20/c128c96f-793e-418e-a4ee-1b10e88db28b/WOL_2324_HK_PL_S1.png?width=235&height=310"
+  }
+}
