@@ -24,12 +24,13 @@ var ALL_FUTURE_FIXTURES;
 var CURRENT_SEASON;
 // Fixture difficulty rating to color code
 var FDR_TO_COLOR_CODE={
-    1: "rgb(55, 85, 35)",
-    2: "rgb(1, 252, 122)",
-    3: "rgb(231, 231, 231)",
-    4: "rgb(255, 23, 81)",
-    5: "rgb(128, 7, 45)",
+    1: ["rgb(55, 85, 35)", "black"],
+    2: ["rgb(1, 252, 122)", "black"],
+    3: ["rgb(231, 231, 231)", "black"],
+    4: ["rgb(255, 23, 81)", "white"],
+    5: ["rgb(128, 7, 45)", "white"]
 }
+
 
 // Functions
 function waitForElement(parentElement, selector){
@@ -60,11 +61,11 @@ function waitForElement(parentElement, selector){
 }
 function get_increment_second_goalie_indexes(){
     if (URL_CODE == "event"){
-        return [2, 2, 22]
+        return [0, 2, 22]
     } else if (URL_CODE == "my-team"){
-        return [3, 3, 33]  
+        return [0, 3, 33]  
     } else {
-        return [3, 3, 3]
+        return [0, 3, 3]
     }
 }
 
@@ -131,7 +132,7 @@ function create_next_five_fixtures_div_element(teamID){
     // function to set background color and text for each fixture div
     let set_background_and_text_for_fixtures = (fixture_list, element)=>{
                         element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
-                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]]};`
+                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_list[2]][1]}; padding: 2px; border: 0.5px solid black`
                     }
    // the fixtures object will be of the type:
    // {24 : [["TEAM", "H", FDR]],
@@ -159,7 +160,7 @@ function create_next_five_fixtures_div_element(teamID){
     if (fixtures_object[start].length == 0) {
         secondary_div.innerText = '-';
         // set background to the grey for blank fixture
-        secondary_div.style = `background: rgb(231, 231, 231);`;
+        secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
 
     } else {
             for (let each_fixture of fixtures_object[start]){
@@ -188,6 +189,7 @@ async function modifyDOM(){
     // the player jersey boxes in the website are inside button tags
     let all_buttons = pitchElement.querySelectorAll("button");
 
+
     // for points page:  30 button tags : 2 for each player
     // for transfers and my-team page:  45 button tags : 3 for each player
     // Skip goalkeeper buttons(indexes 0 and 1 for points, 0-2 for the rest)
@@ -197,49 +199,51 @@ async function modifyDOM(){
     // loop over buttons with index 2,4,... for points page
     // loop over buttons with index 3,6,... for transfers, my-team page
    for (let currentIndex=startValue; currentIndex < all_buttons.length; currentIndex += incrementValue){
-        
-        try {
-        // index 22 is for the bench goalie
-        if (currentIndex == secondGoalieValue) continue;
 
         let playerElement = all_buttons[currentIndex];
-        let sourceElement= playerElement.querySelector("source");
         let imgElement = playerElement.querySelector("img");
         let teamName = imgElement.getAttribute("alt");
         let teamCode = TEAM_NAME_TO_CODE_DICT[teamName];
 
-        let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
-        let jerseyLink = away_jersey_needed ? TEAM_JERSEY_LINK_DICT[teamCode]["away"] : TEAM_JERSEY_LINK_DICT[teamCode]["home"]
-        
-        // remove everything after .png in the link
-        jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
+        try {
+            // index 22 is for the bench goalie
+            if (currentIndex != secondGoalieValue && currentIndex != startValue) {
 
-        // srcset is of the type
-        // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
+                let sourceElement= playerElement.querySelector("source");
 
-        // image dimensions
-        // 66w : 66 x 87
-        // 110w : 110 x 145
-        // 220w : 220 x 290
+                let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
+                let jerseyLink = away_jersey_needed ? TEAM_JERSEY_LINK_DICT[teamCode]["away"] : TEAM_JERSEY_LINK_DICT[teamCode]["home"]
+                
+                // remove everything after .png in the link
+                jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
 
-        let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
-        sourceElement.setAttribute("srcset", srcsetAttribute);
-        imgElement.setAttribute("srcset", srcsetAttribute)
+                // srcset is of the type
+                // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
 
-        imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
+                // image dimensions
+                // 66w : 66 x 87
+                // 110w : 110 x 145
+                // 220w : 220 x 290
 
-        // also inject their next 5 fixtures after modifying img attribute if "my-team" page
-        if (URL_CODE == 'my-team'){
+                let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
+                sourceElement.setAttribute("srcset", srcsetAttribute);
+                imgElement.setAttribute("srcset", srcsetAttribute)
 
-            try {
-            playerElement.removeChild(playerElement.querySelector("upcoming-fixtures"));}
-            catch (err) {
-                // type error if query selector doesn't return a node
+                imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
             }
-            let fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
-            playerElement.appendChild(fixtures_div);
-            
-        }
+
+            // also inject their next 5 fixtures after modifying img attribute if "my-team" page
+            if (URL_CODE == 'my-team'){
+
+                try {
+                playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
+                catch (err) {
+                    // type error if query selector doesn't return a node
+                }
+                let fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
+                playerElement.appendChild(fixtures_div);
+                
+            }
 
         // this error is raised when people removes a player from his team in the transfers page and there is no player present in that player box
         } catch (err){
@@ -370,12 +374,14 @@ function setup_mutation_listener_for_pitch_changes(){
         if (window.location.href != CURRENT_URL) return;
         console.log("[PITCH-change] being called");
         observer.disconnect();
-        modifyDOM();
+        main();
     });
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
     // Options for the observer (which mutations to observe)
-    let config = { childList: true, subtree: true};
+    let attributes = (URL_CODE == "my-team") ? true : false
+    let config = { childList: true, subtree: true, attributes: attributes};
+    console.log(config);
     observer.observe(pitchElement, config)
     console.log("picth observer");
     
