@@ -253,6 +253,9 @@ async function modifyDOM(){
 
     }
 
+        if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
+                setup_mutation_listener_for_pitch_changes();
+        }
 }
 
 function create_team_name_id_code_dict(all_info_dict){
@@ -305,9 +308,6 @@ async function fetch_team_name_away_fixture_dict_and_modify_DOM(){
      // Swap kits if needed after element discovered
      waitForElement(document.body, "[data-testid='pitch']").then(()=>{
         modifyDOM();
-        if (URL_CODE == "transfers"){
-        setup_mutation_listener_for_pitch_changes();
-        }
      })
 }
 
@@ -374,7 +374,10 @@ function setup_mutation_listener_for_pitch_changes(){
         if (window.location.href != CURRENT_URL) return;
         console.log("[PITCH-change] being called");
         observer.disconnect();
-        main();
+        // Swap kits if needed after element discovered
+        waitForElement(document.body, "[data-testid='pitch']").then(()=>{
+            modifyDOM();
+        })
     });
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
@@ -426,8 +429,7 @@ async function main(){
      } else {
         // Swap kits if needed after element discovered
         await waitForElement(document.body,"[data-testid='pitch']");
-        await modifyDOM();
-        setup_mutation_listener_for_pitch_changes();
+        modifyDOM();
     }
 
 }
