@@ -1,4 +1,4 @@
-// Variables declaration
+// Variable declaration
 
 // chosen gameweek 
 var CHOSEN_GAMEWEEK=-1;
@@ -14,6 +14,8 @@ var TEAM_NAME_TO_CODE_DICT={};
 var URL_CODE = '';
 // window.location.href value when content-script is loaded
 var CURRENT_URL = window.location.href;
+// API response from "https://fantasy.premierleague.com/api/bootstrap-static/"
+var BOOTSTRAP_RESPONSE;
 
 // Functions
 function waitForElement(){
@@ -168,17 +170,8 @@ function setup_mutation_listener_for_url_change(){
   observer.observe(document.body, config)
 
 }
-async function main(){
-
-    // return if not proper entry url
-    is_a_proper_link = check_if_url_is_a_valid_link()
-    if (!is_a_proper_link){
-        console.log("no need to inject");
-        return;
-    }
-
-    console.log("need to inject yes");
-
+async function initContentScript(){
+ 
     try {
     let [awayResponse, bootstrapResponse] = await Promise.all([
         // link to get team name and away jersey link
@@ -188,17 +181,35 @@ async function main(){
 
             ])
      TEAM_JERSEY_LINK_DICT = await awayResponse.json();
-     bootstrapResponse = await bootstrapResponse.json();
+     BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
+     
+     // run the main function to inject content script 
+     main();
 
+    } catch (err){
+        console.log(err);
+    }
+}
+
+function main(){
+
+    // return if not proper entry url
+    is_a_proper_link = check_if_url_is_a_valid_link()
+    if (!is_a_proper_link){
+        console.log("no need to inject");
+        return;
+    }
+
+    console.log("need to inject yes");
      // make a dict of team id to team code and 
      // a dict that maps from team name to team code
-     create_team_name_id_code_dict(bootstrapResponse);
+     create_team_name_id_code_dict(BOOTSTRAP_RESPONSE);
     
      // if url is points then get gameweek from url
      // if pick team then use api to get chosen gameweek
 
      // get chosen gameweek
-     find_chosen_gameweek(bootstrapResponse);
+     find_chosen_gameweek(BOOTSTRAP_RESPONSE);
 
      // make a dict that maps from teamName to away fixture value(true if the team has a next away fixture else false)
      create_team_name_away_fixture_dict();
@@ -209,16 +220,10 @@ async function main(){
      })
 
      // add event listeners to run main function if user clicks on (my-page, points)
-     
-
-    } catch (err){
-        console.log(err);
     }
-}
 
 // add mutation listener to run this function again if the route changes
 // This is necessary because content-script won't get loaded again as websites like this
 // use Javascript frameworks and Ajax calls to only update parts of the existing webpage content as the user navigates around the site
 window.onload = setup_mutation_listener_for_url_change;
-
-main();
+initContentScript();
