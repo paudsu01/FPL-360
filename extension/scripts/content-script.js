@@ -256,6 +256,18 @@ function setup_mutation_listener_for_pitch_changes(){
     let config = { childList: true, subtree: true};
     observer.observe(pitchElement, config)
     console.log("picth observer");
+    
+    // set event listener for reset button to run swapKits function
+    if (URL_CODE == 'transfers'){
+        let resetButton = document.querySelector("button[type='reset'");
+        let event_function = ()=>{
+            // disconnect the mutation observer since the main function adds it again
+            observer.disconnect();
+            main()
+            resetButton.removeEventListener("click", event_function)
+        }
+        resetButton.addEventListener("click", event_function);
+    }
 
 }
 function main(){
