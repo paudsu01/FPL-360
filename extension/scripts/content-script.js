@@ -22,6 +22,14 @@ var CURRENT_URL = window.location.href;
 var BOOTSTRAP_RESPONSE;
 var ALL_FUTURE_FIXTURES;
 var CURRENT_SEASON;
+// Fixture difficulty rating to color code
+var FDR_TO_COLOR_CODE={
+    1: "rgb(55, 85, 35)",
+    2: "rgb(1, 252, 122)",
+    3: "rgb(231, 231, 231)",
+    4: "rgb(255, 23, 81)",
+    5: "rgb(128, 7, 45)",
+}
 
 // Functions
 function waitForElement(parentElement, selector){
@@ -107,7 +115,7 @@ function create_next_five_fixtures_object(teamID, start, end){
 
             let home_away = (fixture["team_h"] == teamID) ? "H" : "A"
             let team = (fixture["team_h"] == teamID) ? ID_TEAM_DICT[fixture["team_a"]] : ID_TEAM_DICT[fixture["team_h"]];
-            let fdr = (fixture["team_h"] == teamID) ? fixture["team_a_difficulty"] : fixture["team_h_difficulty"];
+            let fdr = (fixture["team_h"] == teamID) ? fixture["team_h_difficulty"] : fixture["team_a_difficulty"];
             fixtures_object[fixture["event"]].push([team, home_away, fdr])
 
         }
@@ -120,6 +128,11 @@ function create_next_five_fixtures_object(teamID, start, end){
 }
 function create_next_five_fixtures_div_element(teamID){
 
+    // function to set background color and text for each fixture div
+    let set_background_and_text_for_fixtures = (fixture_list, element)=>{
+                        element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
+                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]]};`
+                    }
    // the fixtures object will be of the type:
    // {24 : [["TEAM", "H", FDR]],
    // 25 : [["TEAM", "A", FDR], ["TEAM", "H", FDR]], (double gameweek)
@@ -127,27 +140,39 @@ function create_next_five_fixtures_div_element(teamID){
    // ....
     //}
    let start= CHOSEN_GAMEWEEK;
-   let end = Math.min(CHOSEN_GAMEWEEK+4, 38)
+   let end = Math.min(CHOSEN_GAMEWEEK+3, 38)
 
    let fixtures_object = create_next_five_fixtures_object(teamID, start, end);
-   console.log(fixtures_object);
 
    var MAIN_DIV_ELEMENT = document.createElement("div");
    MAIN_DIV_ELEMENT.setAttribute("class", "upcoming-fixtures")
+   // Hide if any secondary divs overflow
    MAIN_DIV_ELEMENT.setAttribute("style",
-        "display: grid; overflow: hidden; grid-template-columns: repeat(5, 1fr);")
+        "display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px")
 
    while (start <= end){
 
     let secondary_div = document.createElement("div");
-    for (let each_fixture of fixtures_object[start]){
-        secondary_div.innerText += `${each_fixture[0]} (${each_fixture[1]}), `
-    }
+    secondary_div.setAttribute("style",
+        "display: grid; overflow: hidden; grid-template-columns: repeat(1, 1fr)");
 
-    if (!fixtures_object[start]) {secondary_div.innerText = '-';}
-    else {secondary_div.innerText.slice(secondary_div.innerText.length - 2);
-    }
+    if (fixtures_object[start].length == 0) {
+        secondary_div.innerText = '-';
+        // set background to the grey for blank fixture
+        secondary_div.style = `background: rgb(231, 231, 231);`;
 
+    } else {
+            for (let each_fixture of fixtures_object[start]){
+
+                if (fixtures_object[start].length == 1){
+                    set_background_and_text_for_fixtures(each_fixture, secondary_div);
+                } else {
+                    let div_element = document.createElement("div");
+                    set_background_and_text_for_fixtures(each_fixture, div_element);
+                    secondary_div.append(div_element);
+                }
+            }
+    }
     // set background based on fdr
     MAIN_DIV_ELEMENT.appendChild(secondary_div);
     start ++;
@@ -177,8 +202,9 @@ async function modifyDOM(){
         // index 22 is for the bench goalie
         if (currentIndex == secondGoalieValue) continue;
 
-        let sourceElement= all_buttons[currentIndex].querySelector("source");
-        let imgElement = all_buttons[currentIndex].querySelector("img");
+        let playerElement = all_buttons[currentIndex];
+        let sourceElement= playerElement.querySelector("source");
+        let imgElement = playerElement.querySelector("img");
         let teamName = imgElement.getAttribute("alt");
         let teamCode = TEAM_NAME_TO_CODE_DICT[teamName];
 
@@ -205,8 +231,13 @@ async function modifyDOM(){
         // also inject their next 5 fixtures after modifying img attribute if "my-team" page
         if (URL_CODE == 'my-team'){
 
+            try {
+            playerElement.removeChild(playerElement.querySelector("upcoming-fixtures"));}
+            catch (err) {
+                // type error if query selector doesn't return a node
+            }
             let fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
-            all_buttons[currentIndex].appendChild(fixtures_div);
+            playerElement.appendChild(fixtures_div);
             
         }
 
