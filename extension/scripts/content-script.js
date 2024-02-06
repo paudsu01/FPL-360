@@ -65,8 +65,10 @@ async function check_if_away_jersey_needed(playerButtonElement, teamCode){
             }
         } else {
 
-            // only pick first team if double gameweek
+            // element might take time to load
             await waitForElement(playerButtonElement, "span")
+
+            // only pick first team if double gameweek
             let oppositionTeam = playerButtonElement.querySelector("span").innerText.split(',')[0];
             let pattern = new RegExp(/\([HA]\)/);
             let matches = oppositionTeam.match(pattern);
@@ -94,6 +96,7 @@ async function swapKits(){
     // loop over buttons with index 3,6,... for transfers, my-team page
    for (let currentIndex=startValue; currentIndex < all_buttons.length; currentIndex += incrementValue){
         
+        try {
         // index 22 is for the bench goalie
         if (currentIndex == secondGoalieValue) continue;
 
@@ -122,6 +125,11 @@ async function swapKits(){
         imgElement.setAttribute("srcset", srcsetAttribute)
 
         imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
+
+        // this error is raised when people removes a player from his team in the transfers page and there is no player present in that player box
+        } catch (err){
+            console.log("player removed")
+        }
 
     }
 
@@ -176,6 +184,9 @@ async function fetch_team_name_away_fixture_dict_and_swap_kits(){
      // Swap kits if needed after element discovered
      waitForElement(document.body, "[data-testid='pitch']").then(()=>{
         swapKits();
+        if (URL_CODE == "transfers"){
+        setup_mutation_listener_for_pitch_changes();
+        }
      })
 }
 
@@ -230,6 +241,23 @@ async function initContentScript(){
     }
 }
 
+function setup_mutation_listener_for_pitch_changes(){
+
+    // setup observer to run swapKits function if player performs actions that modify the DOM inside the "[data-testid='pitch']" div element
+    // These actions could be brining a substitue player to the starting lineup for example
+    const observer = new MutationObserver(()=>{
+        // another observer callback handles route changes
+        if (window.location.href != CURRENT_URL) return;
+        swapKits();
+    });
+
+    let pitchElement = document.querySelector("[data-testid='pitch']");
+    // Options for the observer (which mutations to observe)
+    let config = { childList: true, subtree: true};
+    observer.observe(pitchElement, config)
+    console.log("picth observer");
+
+}
 function main(){
 
     // return if not proper entry url
@@ -259,8 +287,10 @@ function main(){
         // Swap kits if needed after element discovered
         waitForElement(document.body,"[data-testid='pitch']").then(()=>{
         swapKits();
+        setup_mutation_listener_for_pitch_changes();
      })
     }
+
 }
 
 // add mutation listener to run this function again if the route changes
