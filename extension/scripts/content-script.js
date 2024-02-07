@@ -233,30 +233,26 @@ async function modifyDOM(){
                 imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
             }
 
-            // also inject their next 5 fixtures after modifying img attribute if "my-team" page
-            if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
-
-                try {
-                playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
-                catch (err) {
-                    // type error if query selector doesn't return a node
-                }
-                var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
-                playerElement.appendChild(fixtures_div);
-                
-            }
-
-            if (URL_CODE == 'transfers'){
-            }
-        // this error is raised when people removes a player from his team in the transfers page and there is no player present in that player box
         } catch (err){
+            // error when no a player removed and jo jersey there to know which the player is
         }
+            // also inject their next 5 fixtures after modifying img attribute if "my-team" page
+        if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
 
+            try {
+            playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
+            catch (err) {
+                // type error if query selector doesn't return a node
+            }
+            var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
+            playerElement.appendChild(fixtures_div);
+        }
     }
 
-        if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
-                setup_mutation_listener_for_pitch_changes();
-        }
+    // loop finished, setup mutation observer
+    if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
+        setup_mutation_listener_for_pitch_changes();
+    }
 }
 
 function create_team_name_id_code_dict(all_info_dict){
@@ -391,9 +387,7 @@ function setup_mutation_listener_for_pitch_changes(){
     // Options for the observer (which mutations to observe)
     let attributes = (URL_CODE == "my-team") ? true : false
     let config = { childList: true, subtree: true, attributes: true};
-    console.log(config);
     pitch_observer.observe(pitchElement, config)
-    console.log("pitch observer");
     
     // set event listener for reset button to run modifyDOM function
     if (URL_CODE == 'transfers'){
