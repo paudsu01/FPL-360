@@ -30,7 +30,8 @@ var FDR_TO_COLOR_CODE={
     4: ["rgb(255, 23, 81)", "white"],
     5: ["rgb(128, 7, 45)", "white"]
 }
-
+// observer for pitch changes
+var pitch_observer;
 
 // Functions
 function waitForElement(parentElement, selector){
@@ -233,22 +234,22 @@ async function modifyDOM(){
             }
 
             // also inject their next 5 fixtures after modifying img attribute if "my-team" page
-            if (URL_CODE == 'my-team'){
+            if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
 
                 try {
                 playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                let fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
+                var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
                 playerElement.appendChild(fixtures_div);
                 
             }
 
+            if (URL_CODE == 'transfers'){
+            }
         // this error is raised when people removes a player from his team in the transfers page and there is no player present in that player box
         } catch (err){
-            console.log("player removed")
-            console.log(err)
         }
 
     }
@@ -333,6 +334,12 @@ function setup_mutation_listener_for_url_change(){
     if (window.location.href != CURRENT_URL){
 
         console.log("[URL-change] being called");
+        // disconnect pitch oberser since main sets it again
+        try{
+            pitch_observer.disconnect();
+        } catch (err){
+        }
+
         CURRENT_URL = window.location.href;
         main();
 
@@ -369,11 +376,11 @@ function setup_mutation_listener_for_pitch_changes(){
 
     // setup observer to run modifyDOM function if player performs actions that modify the DOM inside the "[data-testid='pitch']" div element
     // These actions could be brining a substitue player to the starting lineup for example
-    const observer = new MutationObserver(()=>{
+    pitch_observer = new MutationObserver(()=>{
         // another observer callback handles route changes
         if (window.location.href != CURRENT_URL) return;
         console.log("[PITCH-change] being called");
-        observer.disconnect();
+        pitch_observer.disconnect();
         // Swap kits if needed after element discovered
         waitForElement(document.body, "[data-testid='pitch']").then(()=>{
             modifyDOM();
@@ -383,22 +390,14 @@ function setup_mutation_listener_for_pitch_changes(){
     let pitchElement = document.querySelector("[data-testid='pitch']");
     // Options for the observer (which mutations to observe)
     let attributes = (URL_CODE == "my-team") ? true : false
-    let config = { childList: true, subtree: true, attributes: attributes};
+    let config = { childList: true, subtree: true, attributes: true};
     console.log(config);
-    observer.observe(pitchElement, config)
-    console.log("picth observer");
+    pitch_observer.observe(pitchElement, config)
+    console.log("pitch observer");
     
     // set event listener for reset button to run modifyDOM function
     if (URL_CODE == 'transfers'){
-        let resetButton = document.querySelector("button[type='reset'");
-        let event_function = ()=>{
-            // disconnect the mutation observer since the main function adds it again
-            observer.disconnect();
-            main()
-            resetButton.removeEventListener("click", event_function)
         }
-        resetButton.addEventListener("click", event_function);
-    }
 
 }
 async function main(){
