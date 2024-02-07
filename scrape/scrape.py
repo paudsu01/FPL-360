@@ -22,7 +22,7 @@ def parse_response(html: str) -> Dict[str, str]:
     # the div element with class "history-kits__club__kit--awaykit"  contain
     # img with src to away jersey
 
-    # e.g (simplified version) : 
+    # e.g (simplified version) :
 
     # <div class="history-kits__club__kit--awaykit">
     # <picture>
@@ -33,10 +33,12 @@ def parse_response(html: str) -> Dict[str, str]:
 
     # Get team name from img link
 
-    away_div_elements = main_div.find_all("div",
-                                          class_="history-kits__club__kit--awaykit")
-    home_div_elements = main_div.find_all("div",
-                                          class_="history-kits__club__kit--homekit")
+    away_div_elements = main_div.find_all(
+        "div",
+        class_="history-kits__club__kit--awaykit")
+    home_div_elements = main_div.find_all(
+        "div",
+        class_="history-kits__club__kit--homekit")
 
     team_jersey_dict = {}
 
@@ -47,16 +49,14 @@ def parse_response(html: str) -> Dict[str, str]:
         home_jersey_link = home_div_element.find("img")["src"]
         # pattern matches something like match='ARS_2324_AK_PL_S1.png'
         pattern = re.compile("[A-Z]{3}[^/]*.png")
-        
         # just get the first three letters from that name
         teamName = pattern.search(away_jersey_link)[0][:3]
 
         team_jersey_dict[teamName] = {}
         team_jersey_dict[teamName]["away"] = away_jersey_link
         team_jersey_dict[teamName]["home"] = home_jersey_link
-    
     return team_jersey_dict
-        
+
 
 def save_as_json(team_jersey_dict: Dict[str, str]) -> None:
 
@@ -96,5 +96,5 @@ if __name__ == "__main__":
     # parse the html recieved with beautifulSoup and lxml parser
     team_jersey_dict = parse_response(driver.page_source)
 
-    # save the dict as json 
+    # save the dict as json
     save_as_json(team_jersey_dict)
