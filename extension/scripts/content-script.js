@@ -32,6 +32,8 @@ var FDR_TO_COLOR_CODE={
 }
 // observer for pitch changes
 var pitch_observer;
+// observer for changes in sidebar in transfers page
+var bench_oberserver;
 
 // Functions
 function waitForElement(parentElement, selector){
@@ -184,6 +186,56 @@ function create_next_five_fixtures_div_element(teamID){
    return MAIN_DIV_ELEMENT;
 }
 
+function modify_DOM_for_sidebar(){
+    const SIDEBAR = document.querySelector("[class^='SquadBase__PusherSecondary']");
+    // The player's are divided into their position and 
+    // each position has a table of it's own where player info is present inside each tr tag
+    let all_tables = SIDEBAR.querySelectorAll("table");
+    for (let table of all_tables){
+        // the tr element for all players is inside the tbody of each table
+        let all_tr_elements = table.querySelector("tbody").querySelectorAll("tr");
+
+        for (let tr_element of all_tr_elements){
+            
+            // The 2nd(1st index) td is what we are looking for (for image and other necessary stuff)
+            let required_td = tr_element.querySelectorAll("td")[1];
+            let teamCode = required_td.querySelector("span").innerText;
+            
+            // avoid goalies for jersey swap
+            if (required_td.querySelectorAll("span")[1].innerText !== "GKP"){
+
+                // Change img attribute to swap for away jersey as necessary
+                modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
+
+            }
+            // inject the next five fixtures
+
+        }
+
+    }
+}
+
+function modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode){
+
+    let jerseyLink = away_jersey_needed ? TEAM_JERSEY_LINK_DICT[teamCode]["away"] : TEAM_JERSEY_LINK_DICT[teamCode]["home"]
+    // remove everything after .png in the link
+    jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
+
+    // srcset is of the type
+    // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
+
+    // image dimensions
+    // 66w : 66 x 87
+    // 110w : 110 x 145
+    // 220w : 220 x 290
+
+    let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
+    sourceElement.setAttribute("srcset", srcsetAttribute);
+    imgElement.setAttribute("srcset", srcsetAttribute)
+
+    imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
+}
+
 async function modifyDOM(){
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
@@ -213,24 +265,8 @@ async function modifyDOM(){
                 let sourceElement= playerElement.querySelector("source");
 
                 let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
-                let jerseyLink = away_jersey_needed ? TEAM_JERSEY_LINK_DICT[teamCode]["away"] : TEAM_JERSEY_LINK_DICT[teamCode]["home"]
-                
-                // remove everything after .png in the link
-                jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
 
-                // srcset is of the type
-                // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
-
-                // image dimensions
-                // 66w : 66 x 87
-                // 110w : 110 x 145
-                // 220w : 220 x 290
-
-                let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
-                sourceElement.setAttribute("srcset", srcsetAttribute);
-                imgElement.setAttribute("srcset", srcsetAttribute)
-
-                imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
+                modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode);
             }
 
         } catch (err){
@@ -246,7 +282,17 @@ async function modifyDOM(){
             }
             var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
             playerElement.appendChild(fixtures_div);
+        
         }
+
+    }
+
+    // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
+    // for the player search sidebar
+
+    // also need to add mutation observer to observe changes
+    if (URL_CODE == 'transfers'){
+        modify_DOM_for_sidebar();
     }
 
     // loop finished, setup mutation observer
