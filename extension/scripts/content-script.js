@@ -98,7 +98,9 @@ async function check_if_away_jersey_needed(playerButtonElement, teamCode){
         return awayJerseyNeeded
 
 }
-function create_next_five_fixtures_object(teamID, start, end){
+function create_next_five_fixtures_object(teamID, start){
+
+   let end = start + 4;
 
    if (teamID in TEAM_ID_TO_NEXT_FIVE_FIXTURES) return TEAM_ID_TO_NEXT_FIVE_FIXTURES[teamID];
 
@@ -112,10 +114,9 @@ function create_next_five_fixtures_object(teamID, start, end){
    // go through all remaining fixtures and break if we find event "end + 1"
    for (let fixture of ALL_FUTURE_FIXTURES){
 
-        // no need to loop through extra gameweeks
-        if (fixture["event"] == end+1) break;
-
         if (fixture["team_h"] == teamID || fixture["team_a"] == teamID){
+
+            if (Number(fixture.event) > end) break;
 
             let home_away = (fixture["team_h"] == teamID) ? "H" : "A"
             let team = (fixture["team_h"] == teamID) ? ID_TEAM_DICT[fixture["team_a"]] : ID_TEAM_DICT[fixture["team_h"]];
@@ -123,20 +124,26 @@ function create_next_five_fixtures_object(teamID, start, end){
             fixtures_object[fixture["event"]].push([team, home_away, fdr])
 
         }
-
     }
     // save for next use 
     TEAM_ID_TO_NEXT_FIVE_FIXTURES[teamID] = fixtures_object;
 
     return fixtures_object;
 }
-function create_next_five_fixtures_div_element(teamID){
+
+function create_next_five_fixtures_div_element(teamID, colorOnly = false){
 
     // function to set background color and text for each fixture div
     let set_background_and_text_for_fixtures = (fixture_list, element)=>{
                         element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
                         element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_list[2]][1]}; padding: 2px; border: 0.5px solid black`
                     }
+
+    let set_background_and_append_div = (parent_div, color)=>{
+        let third_div = document.createElement("div");
+        third_div.style = `width: 13px; height: 13px; border-radius: 50%; background: ${color};margin: 2px auto;`
+        parent_div.appendChild(third_div);
+    }
    // the fixtures object will be of the type:
    // {24 : [["TEAM", "H", FDR]],
    // 25 : [["TEAM", "A", FDR], ["TEAM", "H", FDR]], (double gameweek)
@@ -144,43 +151,71 @@ function create_next_five_fixtures_div_element(teamID){
    // ....
     //}
    let start= CHOSEN_GAMEWEEK;
-   let end = Math.min(CHOSEN_GAMEWEEK+3, 38)
+   let increment = (colorOnly) ? 4 : 3
+   let end = Math.min(CHOSEN_GAMEWEEK+increment, 38)
 
-   let fixtures_object = create_next_five_fixtures_object(teamID, start, end);
-
+   var fixtures_object = create_next_five_fixtures_object(teamID, start);
+    
    var MAIN_DIV_ELEMENT = document.createElement("div");
    MAIN_DIV_ELEMENT.setAttribute("class", "upcoming-fixtures")
    // Hide if any secondary divs overflow
-   MAIN_DIV_ELEMENT.setAttribute("style",
-        "display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px")
+   if (!colorOnly) {
+        MAIN_DIV_ELEMENT.setAttribute("style",
+            `display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px`)
+   } else {
+        MAIN_DIV_ELEMENT.setAttribute("style",
+            `display: flex; box-sizing: border-box;`)
+   }
+    
 
    while (start <= end){
 
     let secondary_div = document.createElement("div");
-    secondary_div.setAttribute("style",
-        "display: grid; overflow: hidden; grid-template-columns: repeat(1, 1fr)");
+
+    if (colorOnly){
+        secondary_div.setAttribute("style",
+            "display: inline-block; flex: 1");
+    } else {
+        secondary_div.setAttribute("style",
+            "display: grid; overflow: hidden; grid-template-columns: repeat(1, 1fr)");
+    }
 
     if (fixtures_object[start].length == 0) {
-        secondary_div.innerText = '-';
-        // set background to the grey for blank fixture
-        secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
+
+        if (!colorOnly){
+            secondary_div.innerText = '-';
+            // set background to the grey for blank fixture
+            secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
+        } else {
+            // if color only: then create a new div element and insert with color black
+            set_background_and_append_div(secondary_div, "black");
+        }
 
     } else {
             for (let each_fixture of fixtures_object[start]){
 
                 if (fixtures_object[start].length == 1){
-                    set_background_and_text_for_fixtures(each_fixture, secondary_div);
+                    if (colorOnly){
+                        set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0]);
+                            console.log('dpme');
+                    } else {
+                        set_background_and_text_for_fixtures(each_fixture, secondary_div);
+                    }
                 } else {
-                    let div_element = document.createElement("div");
-                    set_background_and_text_for_fixtures(each_fixture, div_element);
-                    secondary_div.append(div_element);
+                    if (colorOnly){
+                            set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0]);
+                            console.log('dpme');
+                    } else {
+                        let div_element = document.createElement("div");
+                        set_background_and_text_for_fixtures(each_fixture, div_element);
+                        secondary_div.append(div_element);
+                    }
                 }
             }
     }
     // set background based on fdr
     MAIN_DIV_ELEMENT.appendChild(secondary_div);
     start ++;
-
    }
 
    return MAIN_DIV_ELEMENT;
@@ -209,8 +244,13 @@ function modify_DOM_for_sidebar(){
                 modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
 
             }
-            // inject the next five fixtures
 
+            let fixtures_div = required_td.querySelector(".upcoming-fixtures");
+            if (fixtures_div) fixtures_div.remove();
+
+            fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
+            // inject the next five fixtures
+            required_td.appendChild(fixtures_div);
         }
 
     }
@@ -242,7 +282,7 @@ function modify_src_attributes(away_jersey_needed, sourceElement, imgElement, te
     imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
 }
 
-async function modifyDOM(){
+async function modifyDOM(modifySidebar=true){
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
     // the player jersey boxes in the website are inside button tags
@@ -297,7 +337,7 @@ async function modifyDOM(){
     // for the player search sidebar
 
     // also need to add mutation observer to observe changes
-    if (URL_CODE == 'transfers'){
+    if (URL_CODE == 'transfers' && modifySidebar){
         modify_DOM_for_sidebar();
     }
 
@@ -379,7 +419,6 @@ function setup_mutation_observer_for_sidebar_changes(sidebar){
     bench_observer = new MutationObserver(()=>{
         // only interested if sidebar's DOM modified when in transfers page
          if (window.location.href == CURRENT_URL){
-            console.log('sidebar modified');
             modify_DOM_for_sidebar();
         }
     });
@@ -444,7 +483,7 @@ function setup_mutation_observer_for_pitch_changes(){
         pitch_observer.disconnect();
         // Swap kits if needed after element discovered
         waitForElement(document.body, "[data-testid='pitch']").then(()=>{
-            modifyDOM();
+            modifyDOM(false);
         })
     });
 
