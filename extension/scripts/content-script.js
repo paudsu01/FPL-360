@@ -33,7 +33,7 @@ var FDR_TO_COLOR_CODE={
 // observer for pitch changes
 var pitch_observer;
 // observer for changes in sidebar in transfers page
-var bench_oberserver;
+var bench_observer;
 
 // Functions
 function waitForElement(parentElement, selector){
@@ -187,6 +187,7 @@ function create_next_five_fixtures_div_element(teamID){
 }
 
 function modify_DOM_for_sidebar(){
+
     const SIDEBAR = document.querySelector("[class^='SquadBase__PusherSecondary']");
     // The player's are divided into their position and 
     // each position has a table of it's own where player info is present inside each tr tag
@@ -213,6 +214,11 @@ function modify_DOM_for_sidebar(){
         }
 
     }
+
+    // disconnect obersver if setup already
+    if (bench_observer) bench_observer.disconnect();
+    // setup mutation observer to observe changes in sidebar DOM
+    setup_mutation_observer_for_sidebar_changes(SIDEBAR);
 }
 
 function modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode){
@@ -297,7 +303,7 @@ async function modifyDOM(){
 
     // loop finished, setup mutation observer
     if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
-        setup_mutation_listener_for_pitch_changes();
+        setup_mutation_observer_for_pitch_changes();
     }
 }
 
@@ -368,7 +374,22 @@ function check_if_url_is_a_valid_link(){
     return false;
 
 }
-function setup_mutation_listener_for_url_change(){
+function setup_mutation_observer_for_sidebar_changes(sidebar){
+
+    bench_observer = new MutationObserver(()=>{
+        // only interested if sidebar's DOM modified when in transfers page
+         if (window.location.href == CURRENT_URL){
+            console.log('sidebar modified');
+            modify_DOM_for_sidebar();
+        }
+    });
+
+    let config = {attributes:true, childList: true, subtree: true};
+    bench_observer.observe(sidebar, config)
+    
+}
+
+function setup_mutation_observer_for_url_change(){
 
   const config = { attributes: false, childList: true, subtree: true }
 
@@ -377,10 +398,8 @@ function setup_mutation_listener_for_url_change(){
 
         console.log("[URL-change] being called");
         // disconnect pitch oberser since main sets it again
-        try{
-            pitch_observer.disconnect();
-        } catch (err){
-        }
+        if (pitch_observer) pitch_observer.disconnect();
+        if (bench_observer) bench_observer.disconnect();
 
         CURRENT_URL = window.location.href;
         main();
@@ -414,7 +433,7 @@ async function initContentScript(){
     }
 }
 
-function setup_mutation_listener_for_pitch_changes(){
+function setup_mutation_observer_for_pitch_changes(){
 
     // setup observer to run modifyDOM function if player performs actions that modify the DOM inside the "[data-testid='pitch']" div element
     // These actions could be brining a substitue player to the starting lineup for example
@@ -476,5 +495,5 @@ async function main(){
 // add mutation listener to run this function again if the route changes
 // This is necessary because content-script won't get loaded again as websites like this
 // use Javascript frameworks and Ajax calls to only update parts of the existing webpage content as the user navigates around the site
-window.onload = setup_mutation_listener_for_url_change;
+window.onload = setup_mutation_observer_for_url_change;
 initContentScript();
