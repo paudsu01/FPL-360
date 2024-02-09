@@ -139,9 +139,23 @@ function create_next_five_fixtures_div_element(teamID, colorOnly = false){
                         element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_list[2]][1]}; padding: 2px; border: 0.5px solid black`
                     }
 
-    let set_background_and_append_div = (parent_div, color)=>{
+    let set_background_and_append_div = (parent_div, color, fixture_info)=>{
         let third_div = document.createElement("div");
-        third_div.style = `width: 13px; height: 13px; border-radius: 50%; background: ${color};margin: 2px auto;`
+        third_div.style = `width: 15px; height: 15px; border-radius: 50%; background: ${color};margin: 2px auto;`
+        third_div.classList.add("fixture-color-div");
+
+        // add tooltip to div
+        let span = document.createElement("span");
+        span.classList.add("fixture-info");
+        if (fixture_info){
+            span.style = `background : ${FDR_TO_COLOR_CODE[fixture_info[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_info[2]][1]}; padding: 2px; border: 0.5px solid black`
+            span.innerText = `${fixture_info[0]} (${fixture_info[1]})`
+        } else {
+            span.innerText = (fixture_info == null) ? "Blank" : `${fixture_info[0]} (${fixture_info[1]})`
+            span.style = "background : black; color: white; padding: 2px; border: 0.5px solid black";
+
+        }
+        third_div.appendChild(span);
         parent_div.appendChild(third_div);
     }
    // the fixtures object will be of the type:
@@ -188,7 +202,7 @@ function create_next_five_fixtures_div_element(teamID, colorOnly = false){
             secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
         } else {
             // if color only: then create a new div element and insert with color black
-            set_background_and_append_div(secondary_div, "black");
+            set_background_and_append_div(secondary_div, "black", null);
         }
 
     } else {
@@ -196,15 +210,13 @@ function create_next_five_fixtures_div_element(teamID, colorOnly = false){
 
                 if (fixtures_object[start].length == 1){
                     if (colorOnly){
-                        set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0]);
-                            console.log('dpme');
+                        set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0], each_fixture);
                     } else {
                         set_background_and_text_for_fixtures(each_fixture, secondary_div);
                     }
                 } else {
                     if (colorOnly){
-                            set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0]);
-                            console.log('dpme');
+                            set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0], each_fixture);
                     } else {
                         let div_element = document.createElement("div");
                         set_background_and_text_for_fixtures(each_fixture, div_element);
@@ -251,6 +263,7 @@ function modify_DOM_for_sidebar(){
             fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
             // inject the next five fixtures
             required_td.appendChild(fixtures_div);
+
         }
 
     }
@@ -423,7 +436,7 @@ function setup_mutation_observer_for_sidebar_changes(sidebar){
         }
     });
 
-    let config = {attributes:true, childList: true, subtree: true};
+    let config = {attributes:false, childList: true, subtree: true};
     bench_observer.observe(sidebar, config)
     
 }
