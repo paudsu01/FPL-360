@@ -32,6 +32,8 @@ var FDR_TO_COLOR_CODE={
 }
 // observer for pitch changes
 var pitch_observer;
+// observer for changes in sidebar in transfers page
+var bench_observer;
 
 // Functions
 function waitForElement(parentElement, selector){
@@ -96,7 +98,9 @@ async function check_if_away_jersey_needed(playerButtonElement, teamCode){
         return awayJerseyNeeded
 
 }
-function create_next_five_fixtures_object(teamID, start, end){
+function create_next_five_fixtures_object(teamID, start){
+
+   let end = start + 4;
 
    if (teamID in TEAM_ID_TO_NEXT_FIVE_FIXTURES) return TEAM_ID_TO_NEXT_FIVE_FIXTURES[teamID];
 
@@ -110,10 +114,9 @@ function create_next_five_fixtures_object(teamID, start, end){
    // go through all remaining fixtures and break if we find event "end + 1"
    for (let fixture of ALL_FUTURE_FIXTURES){
 
-        // no need to loop through extra gameweeks
-        if (fixture["event"] == end+1) break;
-
         if (fixture["team_h"] == teamID || fixture["team_a"] == teamID){
+
+            if (Number(fixture.event) > end) break;
 
             let home_away = (fixture["team_h"] == teamID) ? "H" : "A"
             let team = (fixture["team_h"] == teamID) ? ID_TEAM_DICT[fixture["team_a"]] : ID_TEAM_DICT[fixture["team_h"]];
@@ -121,20 +124,40 @@ function create_next_five_fixtures_object(teamID, start, end){
             fixtures_object[fixture["event"]].push([team, home_away, fdr])
 
         }
-
     }
     // save for next use 
     TEAM_ID_TO_NEXT_FIVE_FIXTURES[teamID] = fixtures_object;
 
     return fixtures_object;
 }
-function create_next_five_fixtures_div_element(teamID){
+
+function create_next_five_fixtures_div_element(teamID, colorOnly = false){
 
     // function to set background color and text for each fixture div
     let set_background_and_text_for_fixtures = (fixture_list, element)=>{
                         element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
                         element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_list[2]][1]}; padding: 2px; border: 0.5px solid black`
                     }
+
+    let set_background_and_append_div = (parent_div, color, fixture_info)=>{
+        let third_div = document.createElement("div");
+        third_div.style = `width: 15px; height: 15px; border-radius: 50%; background: ${color};margin: 2px auto;`
+        third_div.classList.add("fixture-color-div");
+
+        // add tooltip to div
+        let span = document.createElement("span");
+        span.classList.add("fixture-info");
+        if (fixture_info){
+            span.style = `background : ${FDR_TO_COLOR_CODE[fixture_info[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_info[2]][1]}; padding: 2px; border: 0.5px solid black`
+            span.innerText = `${fixture_info[0]} (${fixture_info[1]})`
+        } else {
+            span.innerText = (fixture_info == null) ? "Blank" : `${fixture_info[0]} (${fixture_info[1]})`
+            span.style = "background : black; color: white; padding: 2px; border: 0.5px solid black";
+
+        }
+        third_div.appendChild(span);
+        parent_div.appendChild(third_div);
+    }
    // the fixtures object will be of the type:
    // {24 : [["TEAM", "H", FDR]],
    // 25 : [["TEAM", "A", FDR], ["TEAM", "H", FDR]], (double gameweek)
@@ -142,49 +165,137 @@ function create_next_five_fixtures_div_element(teamID){
    // ....
     //}
    let start= CHOSEN_GAMEWEEK;
-   let end = Math.min(CHOSEN_GAMEWEEK+3, 38)
+   let increment = (colorOnly) ? 4 : 3
+   let end = Math.min(CHOSEN_GAMEWEEK+increment, 38)
 
-   let fixtures_object = create_next_five_fixtures_object(teamID, start, end);
-
+   var fixtures_object = create_next_five_fixtures_object(teamID, start);
+    
    var MAIN_DIV_ELEMENT = document.createElement("div");
    MAIN_DIV_ELEMENT.setAttribute("class", "upcoming-fixtures")
    // Hide if any secondary divs overflow
-   MAIN_DIV_ELEMENT.setAttribute("style",
-        "display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px")
+   if (!colorOnly) {
+        MAIN_DIV_ELEMENT.setAttribute("style",
+            `display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px`)
+   } else {
+        MAIN_DIV_ELEMENT.setAttribute("style",
+            `display: flex; box-sizing: border-box;`)
+   }
+    
 
    while (start <= end){
 
     let secondary_div = document.createElement("div");
-    secondary_div.setAttribute("style",
-        "display: grid; overflow: hidden; grid-template-columns: repeat(1, 1fr)");
+
+    if (colorOnly){
+        secondary_div.setAttribute("style",
+            "display: inline-block; flex: 1");
+    } else {
+        secondary_div.setAttribute("style",
+            "display: grid; overflow: hidden; grid-template-columns: repeat(1, 1fr)");
+    }
 
     if (fixtures_object[start].length == 0) {
-        secondary_div.innerText = '-';
-        // set background to the grey for blank fixture
-        secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
+
+        if (!colorOnly){
+            secondary_div.innerText = '-';
+            // set background to the grey for blank fixture
+            secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
+        } else {
+            // if color only: then create a new div element and insert with color black
+            set_background_and_append_div(secondary_div, "black", null);
+        }
 
     } else {
             for (let each_fixture of fixtures_object[start]){
 
                 if (fixtures_object[start].length == 1){
-                    set_background_and_text_for_fixtures(each_fixture, secondary_div);
+                    if (colorOnly){
+                        set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0], each_fixture);
+                    } else {
+                        set_background_and_text_for_fixtures(each_fixture, secondary_div);
+                    }
                 } else {
-                    let div_element = document.createElement("div");
-                    set_background_and_text_for_fixtures(each_fixture, div_element);
-                    secondary_div.append(div_element);
+                    if (colorOnly){
+                            set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0], each_fixture);
+                    } else {
+                        let div_element = document.createElement("div");
+                        set_background_and_text_for_fixtures(each_fixture, div_element);
+                        secondary_div.append(div_element);
+                    }
                 }
             }
     }
     // set background based on fdr
     MAIN_DIV_ELEMENT.appendChild(secondary_div);
     start ++;
-
    }
 
    return MAIN_DIV_ELEMENT;
 }
 
-async function modifyDOM(){
+function modify_DOM_for_sidebar(){
+
+    const SIDEBAR = document.querySelector("[class^='SquadBase__PusherSecondary']");
+    // The player's are divided into their position and 
+    // each position has a table of it's own where player info is present inside each tr tag
+    let all_tables = SIDEBAR.querySelectorAll("table");
+    for (let table of all_tables){
+        // the tr element for all players is inside the tbody of each table
+        let all_tr_elements = table.querySelector("tbody").querySelectorAll("tr");
+
+        for (let tr_element of all_tr_elements){
+            
+            // The 2nd(1st index) td is what we are looking for (for image and other necessary stuff)
+            let required_td = tr_element.querySelectorAll("td")[1];
+            let teamCode = required_td.querySelector("span").innerText;
+            
+            // avoid goalies for jersey swap
+            if (required_td.querySelectorAll("span")[1].innerText !== "GKP"){
+
+                // Change img attribute to swap for away jersey as necessary
+                modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
+
+            }
+
+            let fixtures_div = required_td.querySelector(".upcoming-fixtures");
+            if (fixtures_div) fixtures_div.remove();
+
+            fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
+            // inject the next five fixtures
+            required_td.appendChild(fixtures_div);
+
+        }
+
+    }
+
+    // disconnect obersver if setup already
+    if (bench_observer) bench_observer.disconnect();
+    // setup mutation observer to observe changes in sidebar DOM
+    setup_mutation_observer_for_sidebar_changes(SIDEBAR);
+}
+
+function modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode){
+
+    let jerseyLink = away_jersey_needed ? TEAM_JERSEY_LINK_DICT[teamCode]["away"] : TEAM_JERSEY_LINK_DICT[teamCode]["home"]
+    // remove everything after .png in the link
+    jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
+
+    // srcset is of the type
+    // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
+
+    // image dimensions
+    // 66w : 66 x 87
+    // 110w : 110 x 145
+    // 220w : 220 x 290
+
+    let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
+    sourceElement.setAttribute("srcset", srcsetAttribute);
+    imgElement.setAttribute("srcset", srcsetAttribute)
+
+    imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
+}
+
+async function modifyDOM(modifySidebar=true){
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
     // the player jersey boxes in the website are inside button tags
@@ -213,24 +324,8 @@ async function modifyDOM(){
                 let sourceElement= playerElement.querySelector("source");
 
                 let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
-                let jerseyLink = away_jersey_needed ? TEAM_JERSEY_LINK_DICT[teamCode]["away"] : TEAM_JERSEY_LINK_DICT[teamCode]["home"]
-                
-                // remove everything after .png in the link
-                jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
 
-                // srcset is of the type
-                // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
-
-                // image dimensions
-                // 66w : 66 x 87
-                // 110w : 110 x 145
-                // 220w : 220 x 290
-
-                let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
-                sourceElement.setAttribute("srcset", srcsetAttribute);
-                imgElement.setAttribute("srcset", srcsetAttribute)
-
-                imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
+                modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode);
             }
 
         } catch (err){
@@ -246,12 +341,22 @@ async function modifyDOM(){
             }
             var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
             playerElement.appendChild(fixtures_div);
+        
         }
+
+    }
+
+    // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
+    // for the player search sidebar
+
+    // also need to add mutation observer to observe changes
+    if (URL_CODE == 'transfers' && modifySidebar){
+        modify_DOM_for_sidebar();
     }
 
     // loop finished, setup mutation observer
     if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
-        setup_mutation_listener_for_pitch_changes();
+        setup_mutation_observer_for_pitch_changes();
     }
 }
 
@@ -322,7 +427,21 @@ function check_if_url_is_a_valid_link(){
     return false;
 
 }
-function setup_mutation_listener_for_url_change(){
+function setup_mutation_observer_for_sidebar_changes(sidebar){
+
+    bench_observer = new MutationObserver(()=>{
+        // only interested if sidebar's DOM modified when in transfers page
+         if (window.location.href == CURRENT_URL){
+            modify_DOM_for_sidebar();
+        }
+    });
+
+    let config = {attributes:false, childList: true, subtree: true};
+    bench_observer.observe(sidebar, config)
+    
+}
+
+function setup_mutation_observer_for_url_change(){
 
   const config = { attributes: false, childList: true, subtree: true }
 
@@ -331,10 +450,8 @@ function setup_mutation_listener_for_url_change(){
 
         console.log("[URL-change] being called");
         // disconnect pitch oberser since main sets it again
-        try{
-            pitch_observer.disconnect();
-        } catch (err){
-        }
+        if (pitch_observer) pitch_observer.disconnect();
+        if (bench_observer) bench_observer.disconnect();
 
         CURRENT_URL = window.location.href;
         main();
@@ -368,7 +485,7 @@ async function initContentScript(){
     }
 }
 
-function setup_mutation_listener_for_pitch_changes(){
+function setup_mutation_observer_for_pitch_changes(){
 
     // setup observer to run modifyDOM function if player performs actions that modify the DOM inside the "[data-testid='pitch']" div element
     // These actions could be brining a substitue player to the starting lineup for example
@@ -379,7 +496,7 @@ function setup_mutation_listener_for_pitch_changes(){
         pitch_observer.disconnect();
         // Swap kits if needed after element discovered
         waitForElement(document.body, "[data-testid='pitch']").then(()=>{
-            modifyDOM();
+            modifyDOM(false);
         })
     });
 
@@ -430,5 +547,5 @@ async function main(){
 // add mutation listener to run this function again if the route changes
 // This is necessary because content-script won't get loaded again as websites like this
 // use Javascript frameworks and Ajax calls to only update parts of the existing webpage content as the user navigates around the site
-window.onload = setup_mutation_listener_for_url_change;
+window.onload = setup_mutation_observer_for_url_change;
 initContentScript();
