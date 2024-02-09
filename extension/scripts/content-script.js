@@ -17,7 +17,7 @@ var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 // Type of url : "transfers", "my-team" and "event"
 var URL_CODE = '';
 // window.location.href value when content-script is loaded
-var CURRENT_URL = window.location.href;
+var CURRENT_URL = trim_url(window.location.href);
 // API response from "https://fantasy.premierleague.com/api/bootstrap-static/"
 var BOOTSTRAP_RESPONSE;
 var ALL_FUTURE_FIXTURES;
@@ -36,6 +36,15 @@ var pitch_observer;
 var bench_observer;
 
 // Functions
+
+// trim url to remove query parameters and hashtags from end of url while also
+function trim_url(link){
+
+    let url = link.split('?')[0].split('#')[0];
+    if (url[url.length -1] == '/') url = url.slice(0, url.length-1);
+    return url;
+}
+
 function waitForElement(parentElement, selector){
 
     return new Promise((resolve, reject)=>{
@@ -225,7 +234,6 @@ function create_next_five_fixtures_div_element(teamID, colorOnly = false){
                 }
             }
     }
-    // set background based on fdr
     MAIN_DIV_ELEMENT.appendChild(secondary_div);
     start ++;
    }
@@ -381,7 +389,8 @@ function find_chosen_gameweek(all_info_dict){
     }
 
     // check url
-    let url = window.location.href;
+    let url = trim_url(window.location.href);
+
     if (url.endsWith("my-team")){
         URL_CODE = "my-team"
         CHOSEN_GAMEWEEK += 1;
@@ -415,7 +424,7 @@ async function fetch_team_name_away_fixture_dict_and_modify_DOM(){
 
 function check_if_url_is_a_valid_link(){
 
-    let url = window.location.href;
+    let url = trim_url(window.location.href);
     let my_team_re = new RegExp("^https?://fantasy\.premierleague\.com/my-team/?$")
     let transfer_re = new RegExp("^https?://fantasy\.premierleague\.com/transfers/?$")
     let event_re = new RegExp("^https?://fantasy\.premierleague\.com/entry/[0-9]*/event/[0-9]{1,2}/?$");
@@ -431,7 +440,7 @@ function setup_mutation_observer_for_sidebar_changes(sidebar){
 
     bench_observer = new MutationObserver(()=>{
         // only interested if sidebar's DOM modified when in transfers page
-         if (window.location.href == CURRENT_URL){
+         if (trim_url(window.location.href) == CURRENT_URL){
             modify_DOM_for_sidebar();
         }
     });
@@ -446,14 +455,14 @@ function setup_mutation_observer_for_url_change(){
   const config = { attributes: false, childList: true, subtree: true }
 
   const observer = new MutationObserver(()=>{
-    if (window.location.href != CURRENT_URL){
+    if (trim_url(window.location.href) != CURRENT_URL){
 
         console.log("[URL-change] being called");
         // disconnect pitch oberser since main sets it again
         if (pitch_observer) pitch_observer.disconnect();
         if (bench_observer) bench_observer.disconnect();
 
-        CURRENT_URL = window.location.href;
+        CURRENT_URL = trim_url(window.location.href);
         main();
 
     }
@@ -477,6 +486,8 @@ async function initContentScript(){
      BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
      ALL_FUTURE_FIXTURES = await fixturesResponse.json();
 
+     // if url is my-team or transfers, fetch last five event gameweeks
+
      // run the main function to inject content script 
      main();
 
@@ -491,7 +502,7 @@ function setup_mutation_observer_for_pitch_changes(){
     // These actions could be brining a substitue player to the starting lineup for example
     pitch_observer = new MutationObserver(()=>{
         // another observer callback handles route changes
-        if (window.location.href != CURRENT_URL) return;
+        if (trim_url(window.location.href) != CURRENT_URL) return;
         console.log("[PITCH-change] being called");
         pitch_observer.disconnect();
         // Swap kits if needed after element discovered
@@ -544,7 +555,7 @@ async function main(){
 
 }
 
-// add mutation listener to run this function again if the route changes
+// add mutation listener to run the main function again if the route changes
 // This is necessary because content-script won't get loaded again as websites like this
 // use Javascript frameworks and Ajax calls to only update parts of the existing webpage content as the user navigates around the site
 window.onload = setup_mutation_observer_for_url_change;
