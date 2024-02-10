@@ -24,6 +24,8 @@ var CURRENT_URL = trim_url(window.location.href);
 var BOOTSTRAP_RESPONSE;
 // API response from "https://fantasy.premierleague.com/api/fixtures?future=1
 var ALL_FUTURE_FIXTURES;
+// API response from "https://fantasy.premierleague.com/api/fixtures?future=0
+var ALL_PAST_FIXTURES;
 // store response from https://fantasy.premierleague.com/api/event/${GW}/live/
 // in one object, with the gameweeks as keys as the api response as values
 var LAST_FEW_EVENTS_DATA ={};
@@ -411,15 +413,28 @@ function create_past_fixtures_div_element(playerID){
 
     let end = CHOSEN_GAMEWEEK-1;
     let start = LAST_GAMEWEEK_WITH_DATA;
+
     while (start <= end){
 
         let points = LAST_FEW_EVENTS_DATA[start]["elements"][playerID-1]["stats"].total_points;
 
-        let third_div = document.createElement("div");
+        // div to show points
+        let secondary_div = document.createElement("div");
+        secondary_div.classList.add("point-div");
         let [background, color] = get_color_for_points(points);
-        third_div.style = `width: 17px; height: 17px; color: ${color}; background: ${background} ;margin: 2px auto; font-size: 12px; border: 0.1px solid black`
-        third_div.innerText = points;
-        MAIN_DIV_ELEMENT.appendChild(third_div);
+        secondary_div.style = `width: 17px; height: 17px; color: ${color}; background: ${background} ;margin: 2px auto; font-size: 12px; border: 0.1px solid black`
+        secondary_div.innerText = points;
+
+        // span element for tooltip when hovering over the point
+        let span = document.createElement("span");
+        span.classList.add("point-info");
+        span.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
+        let fixture = null;
+        span.innerText = `GW ${start} ${fixture}`
+        secondary_div.appendChild(span);
+ 
+        // shows Gameweek, team, points
+        MAIN_DIV_ELEMENT.appendChild(secondary_div);
         start ++;
 
     }
@@ -539,17 +554,20 @@ function setup_mutation_observer_for_url_change(){
 async function initContentScript(){
  
     try {
-    let [awayResponse, bootstrapResponse, fixturesResponse] = await Promise.all([
+    let [awayResponse, bootstrapResponse, FutureFixturesResponse, PastFixturesResponse] = await Promise.all([
         // link to get team name and away jersey link
         fetch("https://paudsu01.github.io/FPL-360/extension/FPL-HOME-AWAY.json"),
         // link to get info for current gameweek and team name and their appropriate ids
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        // Get all fixtures 
-        fetch("https://fantasy.premierleague.com/api/fixtures/?future=1")
+        // Get all future fixtures 
+        fetch("https://fantasy.premierleague.com/api/fixtures/?future=1"),
+        // Get all past fixtures
+        fetch("https://fantasy.premierleague.com/api/fixtures/?future=0"),
             ])
     TEAM_JERSEY_LINK_DICT = await awayResponse.json();
     BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
-    ALL_FUTURE_FIXTURES = await fixturesResponse.json();
+    ALL_FUTURE_FIXTURES = await FutureFixturesResponse.json();
+    ALL_PAST_FIXTURES = await PastFixturesResponse.json();
 
     // get chosen gameweek
     find_chosen_gameweek(BOOTSTRAP_RESPONSE);

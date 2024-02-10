@@ -1,8 +1,8 @@
-.fixture-color-div{
+.fixture-color-div, .point-div{
     position: relative;
 }
 
-.fixture-info {
+.fixture-info, .point-info{
     visibility: hidden;
     text-align: center;
     width: 60px;
@@ -10,11 +10,14 @@
     border-radius: 6px;
     position: absolute;
     z-index: 1;
-    top: 100%;
+    top: 120%;
     left: 50%;
     margin-left: -30px;
   }
   
   .fixture-color-div:hover .fixture-info {
+    visibility: visible;
+  }
+  .point-div:hover .point-info {
     visibility: visible;
   }
