@@ -637,8 +637,8 @@ async function fetch_team_name_away_fixture_dict_and_modify_DOM(){
     for (let fixture of fixtures){
         let home_team = ID_TEAM_DICT[fixture["team_h"]];
         let away_team = ID_TEAM_DICT[fixture["team_a"]];
-        TEAM_AWAY_DICT[home_team] = false;
-        TEAM_AWAY_DICT[away_team] = true;
+        if (!(home_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[home_team] = false;
+        if (!(away_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[away_team] = true;
     }
     
      // Swap kits if needed after element discovered
