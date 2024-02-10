@@ -411,7 +411,7 @@ function create_past_fixtures_div_element(playerID, teamID){
 
     if (LAST_GAMEWEEK_WITH_DATA == null) return MAIN_DIV_ELEMENT;
 
-    let end = CHOSEN_GAMEWEEK-1;
+    let end = get_current_gameweek();
     let start = LAST_GAMEWEEK_WITH_DATA;
 
     while (start <= end){
@@ -469,6 +469,16 @@ function create_team_name_id_code_dict(all_info_dict){
     }
 }
 
+function get_current_gameweek(){
+
+    let all_gameweeks = BOOTSTRAP_RESPONSE["events"];
+    for (let gameweek of all_gameweeks){
+        if (gameweek["is_current"] === true){
+            return Number(gameweek["id"]);
+        }
+    }
+
+}
 function find_chosen_gameweek(all_info_dict){
 
     let all_gameweeks = all_info_dict["events"];
@@ -580,11 +590,8 @@ async function initContentScript(){
     ALL_FUTURE_FIXTURES = await FutureFixturesResponse.json();
     ALL_PAST_FIXTURES = await PastFixturesResponse.json();
 
-    // get chosen gameweek
-    find_chosen_gameweek(BOOTSTRAP_RESPONSE);
-    
     // fetch the last few events data
-    let gameweek_value = CHOSEN_GAMEWEEK-1   ;
+    let gameweek_value = get_current_gameweek()   ;
     let end = Math.max(1, gameweek_value - 4);
     while (gameweek_value >= end){
         let response = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek_value}/live/`);
