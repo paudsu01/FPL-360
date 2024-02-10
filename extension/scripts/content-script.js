@@ -15,7 +15,9 @@ var TEAM_NAME_TO_CODE_DICT={};
 // Team code to next 5 fixtures
 var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 // player webname to player id mapping
-var PLAYERW_WEB_NAME_TO_ID = {};
+var PLAYER_WEB_NAME_TO_ID = {};
+// player id to player data dict
+var PLAYER_ID_TO_DATA = {};
 // Type of url : "transfers", "my-team" and "event"
 var URL_CODE = '';
 // window.location.href value when content-script is loaded
@@ -297,10 +299,11 @@ function modify_DOM_for_sidebar(){
             }
             // inject the net transfers arrow
             let name_div = required_td.querySelector("[class^='ElementInTable__Name']");
-            let net_transfers_element = create_net_transfers_element(PLAYERW_WEB_NAME_TO_ID[name_div.innerText], tooltip="div");
+            let net_transfers_element = create_net_transfers_element(PLAYER_WEB_NAME_TO_ID[name_div.innerText], tooltip="div");
 
             net_transfers_element.style.fontSize = '12px';
             net_transfers_element.style.float = '';
+            console.log(net_transfers_element);
             required_td.nextSibling.appendChild(net_transfers_element);
 
         }
@@ -388,7 +391,7 @@ async function modifyDOM(modifySidebar=true){
                 // type error if query selector doesn't return a node
             }
             var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
-            var past_fixtures_div = create_past_fixtures_div_element(PLAYERW_WEB_NAME_TO_ID[player_web_name], TEAM_ID_DICT[teamCode]);
+            var past_fixtures_div = create_past_fixtures_div_element(PLAYER_WEB_NAME_TO_ID[player_web_name], TEAM_ID_DICT[teamCode]);
             playerElement.appendChild(past_fixtures_div);
 
             if (URL_CODE == 'transfers'){
@@ -399,7 +402,7 @@ async function modifyDOM(modifySidebar=true){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                let netTransfersElement = create_net_transfers_and_profit_loss_element(PLAYERW_WEB_NAME_TO_ID[player_web_name]);
+                let netTransfersElement = create_net_transfers_and_profit_loss_element(PLAYER_WEB_NAME_TO_ID[player_web_name]);
                 player_value_element.appendChild(netTransfersElement);
             }
         }
@@ -465,7 +468,7 @@ function create_net_transfers_element(playerID, tooltip="span"){
     let net_transfers_element = document.createElement("div");
     net_transfers_element.classList.add("net-transfers-info");
     
-    let player_data = BOOTSTRAP_RESPONSE.elements.find((playerData)=> playerData.id == playerID);
+    let player_data = PLAYER_ID_TO_DATA[playerID];
     let transfers_in = player_data.transfers_in_event;
     let transfers_out = player_data.transfers_out_event;
 
@@ -481,7 +484,10 @@ function create_net_transfers_element(playerID, tooltip="span"){
     let tooltip_element = document.createElement(tooltip);
     tooltip_element.classList.add("net-transfers-info-tooltip");
         tooltip_element.style = `letter-spacing: normal;background : ${color}; color: ${(color == 'red') ? "white" : "black"}; padding: 2px; border: 0.5px solid black; rotate:${-degree}deg`
-        if (tooltip == "div") tooltip_element.style.width='100px'
+        if (tooltip == "div") {
+            tooltip_element.style.width='120px'
+            tooltip_element.style.marginLeft='-40px';
+        }
         tooltip_element.innerText = `Net transfers: ${transfers_in - transfers_out}`;
     net_transfers_element.appendChild(tooltip_element);
 
@@ -568,10 +574,12 @@ function get_fixture(fixtureID, teamID){
     }
     return "Blank"
 }
-function create_player_name_id_dict(){
-
+function create_player_dict(){
+    // creates player web name to id object and
+    // creates player id to player data object
     for (let player_object of BOOTSTRAP_RESPONSE["elements"]){
-        PLAYERW_WEB_NAME_TO_ID[player_object.web_name] = player_object.id;
+        PLAYER_WEB_NAME_TO_ID[player_object.web_name] = player_object.id;
+        PLAYER_ID_TO_DATA[player_object.id] = player_object;
     }
 
 }
@@ -732,7 +740,8 @@ async function initContentScript(){
      create_team_name_id_code_dict(BOOTSTRAP_RESPONSE);
      
      // create dict from player web name to id
-     create_player_name_id_dict();
+     create_player_dict();
+     
 
     waitForElement(document.body, "[href^='/entry/']").then(()=>{
             USER_ID = get_user_id(trim_url(document.querySelector("[href^='/entry/']").getAttribute("href")));
