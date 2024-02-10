@@ -422,6 +422,7 @@ function create_profit_loss_element(playerID){
     let profit_loss_element = document.createElement("div");
     profit_loss_element.classList.add("profit-loss-info");
     profit_loss_element.innerText = '(';
+    profit_loss_element.style = 'float:left';
 
     let profit_loss = get_profit_loss(playerID);
     let color = (profit_loss >= 0) ? "green" : "red";
@@ -430,7 +431,6 @@ function create_profit_loss_element(playerID){
     let triangle_element = document.createElement("span");
     triangle_element.style = `color: ${color}`
     triangle_element.innerText = triangle;
-    console.log(triangle_element);
 
     let price_element = document.createElement("span");
     price_element.innerText = profit_loss + ')';
@@ -439,6 +439,32 @@ function create_profit_loss_element(playerID){
     profit_loss_element.appendChild(price_element);
 
     return profit_loss_element;
+
+}
+function create_net_transfers_element(playerID){
+
+    let get_price_change_info_in_arrows = (net_transfers)=>{
+        if (Math.abs(net_transfers) <= 5e3) return "‹";
+        else if (Math.abs(net_transfers) <= 5e4) return "‹‹";
+        else if (Math.abs(net_transfers) <= 1e5) return "‹‹‹";
+        else return "‹‹‹‹";
+    }
+
+    let net_transfers_element = document.createElement("div");
+    net_transfers_element.classList.add("net-transfers-info");
+    
+    let player_data = BOOTSTRAP_RESPONSE.elements.find((playerData)=> playerData.id == playerID);
+    let transfers_in = player_data.transfers_in_event;
+    let transfers_out = player_data.transfers_out_event;
+
+    let color = ((transfers_in - transfers_out) >= 0) ? "green" : "red";
+    let degree = ((transfers_in - transfers_out) >= 0) ? "90deg" : "-90deg";
+    net_transfers_element.style = `margin-left:2px;display: inline-block; rotate:${degree}; font-size:7px; margin-top:2px; float:left; letter-spacing:-1px; color:${color}`;
+
+    let price_change_info = get_price_change_info_in_arrows(transfers_in-transfers_out);
+
+    net_transfers_element.innerText = price_change_info
+    return net_transfers_element;
 
 }
 function create_net_transfers_and_profit_loss_element(playerID){
@@ -453,13 +479,12 @@ function create_net_transfers_and_profit_loss_element(playerID){
     // price difference 
     // tooltip
 
-    let net_transfers_element = document.createElement("span");
-    net_transfers_element.classList.add("net-transfers-info");
+    let net_transfers_element = create_net_transfers_element(playerID);
     // arrow
     // tooltip
 
-    MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
     MAIN_DIV_ELEMENT.appendChild(profit_loss_element);
+    MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
     return MAIN_DIV_ELEMENT;
 }
 
@@ -700,7 +725,6 @@ async function initContentScript(){
             fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
                 response=>response.json()).then((response)=>{
                     USER_DATA = response;
-                    console.log(USER_DATA);
                     main();
                 })
         })
