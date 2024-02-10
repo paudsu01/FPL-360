@@ -14,13 +14,20 @@ var TEAM_JERSEY_LINK_DICT={};
 var TEAM_NAME_TO_CODE_DICT={};
 // Team code to next 5 fixtures
 var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
+// player webname to player id mapping
+var PLAYERW_WEB_NAME_TO_ID = {};
 // Type of url : "transfers", "my-team" and "event"
 var URL_CODE = '';
 // window.location.href value when content-script is loaded
 var CURRENT_URL = trim_url(window.location.href);
 // API response from "https://fantasy.premierleague.com/api/bootstrap-static/"
 var BOOTSTRAP_RESPONSE;
+// API response from "https://fantasy.premierleague.com/api/fixtures?future=1
 var ALL_FUTURE_FIXTURES;
+// store response from https://fantasy.premierleague.com/api/event/${GW}/live/
+// in one object, with the gameweeks as keys as the api response as values
+var LAST_FEW_EVENTS_DATA ={};
+var LAST_GAMEWEEK_WITH_DATA = null;
 var CURRENT_SEASON;
 // Fixture difficulty rating to color code
 var FDR_TO_COLOR_CODE={
@@ -109,7 +116,7 @@ async function check_if_away_jersey_needed(playerButtonElement, teamCode){
 }
 function create_next_five_fixtures_object(teamID, start){
 
-   let end = start + 4;
+   let end = Math.min(start+4, 38)
 
    if (teamID in TEAM_ID_TO_NEXT_FIVE_FIXTURES) return TEAM_ID_TO_NEXT_FIVE_FIXTURES[teamID];
 
@@ -339,17 +346,26 @@ async function modifyDOM(modifySidebar=true){
         } catch (err){
             // error when no a player removed and jo jersey there to know which the player is
         }
-            // also inject their next 5 fixtures after modifying img attribute if "my-team" page
         if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
 
+            // inject their next 5 fixtures after modifying img attribute if "my-team" page
             try {
-            playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
+                playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
             catch (err) {
                 // type error if query selector doesn't return a node
             }
             var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
             playerElement.appendChild(fixtures_div);
         
+            // inject their past 4 fixtures data after (Last few gameweeks points)
+            try {
+                playerElement.removeChild(playerElement.querySelector(".past-fixtures"));}
+            catch (err) {
+                // type error if query selector doesn't return a node
+            }
+            let player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
+            var past_fixtures_div = create_past_fixtures_div_element(PLAYERW_WEB_NAME_TO_ID[player_web_name]);
+            playerElement.appendChild(past_fixtures_div);
         }
 
     }
@@ -368,6 +384,55 @@ async function modifyDOM(modifySidebar=true){
     }
 }
 
+function create_past_fixtures_div_element(playerID){
+
+    let get_color_for_points = (points)=>{
+
+        //        0 -2 : no color ( red)
+        //        3 - 5 : no color
+        //       6 - 8 : green
+        //        9 - 11 : blue 
+        //        12+ : purple
+
+        if (points <= 2) return FDR_TO_COLOR_CODE[4];
+        else if (points <= 5) return FDR_TO_COLOR_CODE[3];
+        else if (points <= 8) return FDR_TO_COLOR_CODE[2];
+        else if (points <= 12) return ["rgb(64,224,208)", "black"];
+        else return ["rgb(128, 98, 214)", "white"];
+
+    }
+
+    let MAIN_DIV_ELEMENT = document.createElement("div");
+    MAIN_DIV_ELEMENT.classList.add("past-fixtures");
+    MAIN_DIV_ELEMENT.setAttribute("style",
+            `display: flex; box-sizing: border-box;`)
+
+    if (LAST_GAMEWEEK_WITH_DATA == null) return MAIN_DIV_ELEMENT;
+
+    let end = CHOSEN_GAMEWEEK-1;
+    let start = LAST_GAMEWEEK_WITH_DATA;
+    while (start <= end){
+
+        let points = LAST_FEW_EVENTS_DATA[start]["elements"][playerID-1]["stats"].total_points;
+
+        let third_div = document.createElement("div");
+        let [background, color] = get_color_for_points(points);
+        third_div.style = `width: 17px; height: 17px; color: ${color}; background: ${background} ;margin: 2px auto; font-size: 12px; border: 0.1px solid black`
+        third_div.innerText = points;
+        MAIN_DIV_ELEMENT.appendChild(third_div);
+        start ++;
+
+    }
+    return MAIN_DIV_ELEMENT;
+}
+
+function create_player_name_id_dict(){
+
+    for (let player_object of BOOTSTRAP_RESPONSE["elements"]){
+        PLAYERW_WEB_NAME_TO_ID[player_object.web_name] = player_object.id;
+    }
+
+}
 function create_team_name_id_code_dict(all_info_dict){
 
     let teams = all_info_dict["teams"];
@@ -392,11 +457,11 @@ function find_chosen_gameweek(all_info_dict){
     let url = trim_url(window.location.href);
 
     if (url.endsWith("my-team")){
-        URL_CODE = "my-team"
+        URL_CODE = "my-team";
         CHOSEN_GAMEWEEK += 1;
     } else if (url.endsWith("transfers")){
         CHOSEN_GAMEWEEK += 1;
-        URL_CODE = "transfers"
+        URL_CODE = "transfers";
     } else {
         URL_CODE = "event";
         let url_pieces = url.split('/');
@@ -482,11 +547,29 @@ async function initContentScript(){
         // Get all fixtures 
         fetch("https://fantasy.premierleague.com/api/fixtures/?future=1")
             ])
-     TEAM_JERSEY_LINK_DICT = await awayResponse.json();
-     BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
-     ALL_FUTURE_FIXTURES = await fixturesResponse.json();
+    TEAM_JERSEY_LINK_DICT = await awayResponse.json();
+    BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
+    ALL_FUTURE_FIXTURES = await fixturesResponse.json();
 
-     // if url is my-team or transfers, fetch last five event gameweeks
+    // get chosen gameweek
+    find_chosen_gameweek(BOOTSTRAP_RESPONSE);
+    
+    // fetch the last few events data
+    let gameweek_value = CHOSEN_GAMEWEEK-1   ;
+    let end = Math.max(1, gameweek_value - 4);
+    while (gameweek_value >= end){
+        let response = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek_value}/live/`);
+        LAST_FEW_EVENTS_DATA[gameweek_value] = await response.json();
+        LAST_GAMEWEEK_WITH_DATA = gameweek_value;
+        gameweek_value --;
+    }
+
+     // make a dict of team id to team code and 
+     // a dict that maps from team name to team code
+     create_team_name_id_code_dict(BOOTSTRAP_RESPONSE);
+     
+     // create dict from player web name to id
+     create_player_name_id_dict();
 
      // run the main function to inject content script 
      main();
@@ -522,6 +605,7 @@ function setup_mutation_observer_for_pitch_changes(){
         }
 
 }
+
 async function main(){
 
     // return if not proper entry url
@@ -532,9 +616,6 @@ async function main(){
     }
 
     console.log("need to inject yes");
-     // make a dict of team id to team code and 
-     // a dict that maps from team name to team code
-     create_team_name_id_code_dict(BOOTSTRAP_RESPONSE);
     
      // if url is points then get gameweek from url
      // if pick team then use api to get chosen gameweek
