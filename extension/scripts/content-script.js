@@ -291,6 +291,18 @@ function modify_DOM_for_sidebar(){
             // inject the next five fixtures
             required_td.appendChild(fixtures_div);
 
+            try {
+                tr_element.querySelector(".net-transfers-info").remove();
+            } catch (error) {
+            }
+            // inject the net transfers arrow
+            let name_div = required_td.querySelector("[class^='ElementInTable__Name']");
+            let net_transfers_element = create_net_transfers_element(PLAYERW_WEB_NAME_TO_ID[name_div.innerText], tooltip="div");
+
+            net_transfers_element.style.fontSize = '12px';
+            net_transfers_element.style.float = '';
+            required_td.nextSibling.appendChild(net_transfers_element);
+
         }
 
     }
@@ -441,7 +453,7 @@ function create_profit_loss_element(playerID){
     return profit_loss_element;
 
 }
-function create_net_transfers_element(playerID){
+function create_net_transfers_element(playerID, tooltip="span"){
 
     let get_price_change_info_in_arrows = (net_transfers)=>{
         if (Math.abs(net_transfers) <= 5e3) return "‹";
@@ -466,11 +478,12 @@ function create_net_transfers_element(playerID){
 
     // add tooltip
     color = ((transfers_in - transfers_out) >= 0) ? "rgb(1, 252, 122)" : "red";
-    let tooltip = document.createElement("span");
-    tooltip.classList.add("net-transfers-info-tooltip");
-        tooltip.style = `letter-spacing: normal;background : ${color}; color: ${(color == 'red') ? "white" : "black"}; padding: 2px; border: 0.5px solid black; rotate:${-degree}deg`
-        tooltip.innerText = `Net transfers: ${transfers_in - transfers_out}`;
-    net_transfers_element.appendChild(tooltip);
+    let tooltip_element = document.createElement(tooltip);
+    tooltip_element.classList.add("net-transfers-info-tooltip");
+        tooltip_element.style = `letter-spacing: normal;background : ${color}; color: ${(color == 'red') ? "white" : "black"}; padding: 2px; border: 0.5px solid black; rotate:${-degree}deg`
+        if (tooltip == "div") tooltip_element.style.width='100px'
+        tooltip_element.innerText = `Net transfers: ${transfers_in - transfers_out}`;
+    net_transfers_element.appendChild(tooltip_element);
 
     return net_transfers_element;
 
@@ -482,14 +495,7 @@ function create_net_transfers_and_profit_loss_element(playerID){
     MAIN_DIV_ELEMENT.style = 'display: inline-block; font-size:smaller;';
 
     let profit_loss_element = create_profit_loss_element(playerID);
-
-    // up / down triangle
-    // price difference 
-    // tooltip
-
     let net_transfers_element = create_net_transfers_element(playerID);
-    // arrow
-    // tooltip
 
     MAIN_DIV_ELEMENT.appendChild(profit_loss_element);
     MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
