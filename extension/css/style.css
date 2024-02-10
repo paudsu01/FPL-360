@@ -1,8 +1,8 @@
-.fixture-color-div, .point-div{
+.fixture-color-div, .point-div, .net-transfers-info{
     position: relative;
 }
 
-.fixture-info{
+.fixture-info, .net-transfers-info-tooltip, .point-info{
     visibility: hidden;
     text-align: center;
     width: 60px;
@@ -13,24 +13,19 @@
     top: 120%;
     left: 50%;
     margin-left: -30px;
+  }
+ 
+  .net-transfers-info-tooltip{
+    margin-left : -12px;
+    font-size: 10px;
   }
 
- .point-info{
-    visibility: hidden;
-    text-align: center;
-    width: 60px;
-    padding: 5px;
-    border-radius: 6px;
-    position: absolute;
-    z-index: 1;
-    top: 120%;
-    left: 50%;
-    margin-left: -30px;
-  }
-   
   .fixture-color-div:hover .fixture-info {
     visibility: visible;
   }
   .point-div:hover .point-info {
+    visibility: visible;
+  }
+  .net-transfers-info:hover .net-transfers-info-tooltip{
     visibility: visible;
   }
