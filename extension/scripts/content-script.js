@@ -31,6 +31,10 @@ var ALL_PAST_FIXTURES;
 var LAST_FEW_EVENTS_DATA ={};
 var LAST_GAMEWEEK_WITH_DATA = null;
 var CURRENT_SEASON;
+// User's team id
+var USER_ID;
+// User's team data
+var USER_DATA;
 // Fixture difficulty rating to color code
 var FDR_TO_COLOR_CODE={
     1: ["rgb(55, 85, 35)", "black"],
@@ -52,6 +56,12 @@ function trim_url(link){
     let url = link.split('?')[0].split('#')[0];
     if (url[url.length -1] == '/') url = url.slice(0, url.length-1);
     return url;
+}
+
+function get_user_id(href){
+
+    let split_values = href.split('/');
+    return Number(split_values[split_values.length-3]);
 }
 
 function waitForElement(parentElement, selector){
@@ -365,9 +375,16 @@ async function modifyDOM(modifySidebar=true){
             catch (err) {
                 // type error if query selector doesn't return a node
             }
-            let player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
+            var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
             var past_fixtures_div = create_past_fixtures_div_element(PLAYERW_WEB_NAME_TO_ID[player_web_name], TEAM_ID_DICT[teamCode]);
             playerElement.appendChild(past_fixtures_div);
+
+            if (URL_CODE == 'transfers'){
+                // show net transfers data
+                let player_value_element = playerElement.querySelector("[class^='PitchElementData__ElementValue']");
+                let netTransfersElement = create_net_transfers_and_profit_loss_element(PLAYERW_WEB_NAME_TO_ID[player_web_name]);
+                player_value_element.appendChild(netTransfersElement);
+            }
         }
 
     }
@@ -384,6 +401,27 @@ async function modifyDOM(modifySidebar=true){
     if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
         setup_mutation_observer_for_pitch_changes();
     }
+}
+
+function create_net_transfers_and_profit_loss_element(playerID){
+    
+    let MAIN_DIV_ELEMENT = document.createElement("div");
+    MAIN_DIV_ELEMENT.classList.add("price-change-info");
+
+    let profit_loss_element = document.createElement("span");
+    profit_loss_element.classList.add("profit-loss-info");
+    // up / down triangle
+    // price difference 
+    // tooltip
+
+    let net_transfers_element = document.createElement("span");
+    net_transfers_element.classList.add("net-transfers-info");
+    // arrow
+    // tooltip
+
+    MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
+    MAIN_DIV_ELEMENT.appendChild(profit_loss_element);
+    return MAIN_DIV_ELEMENT;
 }
 
 function create_past_fixtures_div_element(playerID, teamID){
@@ -564,7 +602,18 @@ function setup_mutation_observer_for_url_change(){
         if (bench_observer) bench_observer.disconnect();
 
         CURRENT_URL = trim_url(window.location.href);
-        main();
+
+        // fetch latest team of the user if user navigated to transfers page
+        if (CURRENT_URL.endsWith("transfers")){
+            fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
+                response=>response.json()).then((response)=>{
+                    USER_DATA = response;
+                    console.log(USER_DATA);
+                    main();
+                    })
+        } else {
+            main();
+        }
 
     }
   })
@@ -607,8 +656,15 @@ async function initContentScript(){
      // create dict from player web name to id
      create_player_name_id_dict();
 
-     // run the main function to inject content script 
-     main();
+    waitForElement(document.body, "[href^='/entry/']").then(()=>{
+            USER_ID = get_user_id(trim_url(document.querySelector("[href^='/entry/']").getAttribute("href")));
+            fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
+                response=>response.json()).then((response)=>{
+                    USER_DATA = response;
+                    console.log(USER_DATA);
+                    main();
+                })
+        })
 
     } catch (err){
         console.log(err);
