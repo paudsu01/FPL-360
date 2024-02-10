@@ -366,7 +366,7 @@ async function modifyDOM(modifySidebar=true){
                 // type error if query selector doesn't return a node
             }
             let player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
-            var past_fixtures_div = create_past_fixtures_div_element(PLAYERW_WEB_NAME_TO_ID[player_web_name]);
+            var past_fixtures_div = create_past_fixtures_div_element(PLAYERW_WEB_NAME_TO_ID[player_web_name], TEAM_ID_DICT[teamCode]);
             playerElement.appendChild(past_fixtures_div);
         }
 
@@ -386,7 +386,7 @@ async function modifyDOM(modifySidebar=true){
     }
 }
 
-function create_past_fixtures_div_element(playerID){
+function create_past_fixtures_div_element(playerID, teamID){
 
     let get_color_for_points = (points)=>{
 
@@ -416,7 +416,8 @@ function create_past_fixtures_div_element(playerID){
 
     while (start <= end){
 
-        let points = LAST_FEW_EVENTS_DATA[start]["elements"][playerID-1]["stats"].total_points;
+        let stats = LAST_FEW_EVENTS_DATA[start]["elements"][playerID-1]["stats"]
+        let points = stats.total_points;
 
         // div to show points
         let secondary_div = document.createElement("div");
@@ -426,14 +427,15 @@ function create_past_fixtures_div_element(playerID){
         secondary_div.innerText = points;
 
         // span element for tooltip when hovering over the point
-        let span = document.createElement("span");
-        span.classList.add("point-info");
-        span.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
-        let fixture = null;
-        span.innerText = `GW ${start} ${fixture}`
-        secondary_div.appendChild(span);
+        let info = document.createElement("div");
+        info.classList.add("point-info");
+        info.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
+        // get fixture info : opposition team and home/away info
+        let fixture = get_fixture(LAST_FEW_EVENTS_DATA[start]["elements"][playerID-1]["explain"][0].fixture, teamID)
+        // show Gameweek, team, xG, xA
+        info.innerText = `GW ${start} ${fixture} xG ${stats.expected_goals} xA ${stats.expected_assists}`
+        secondary_div.appendChild(info);
  
-        // shows Gameweek, team, points
         MAIN_DIV_ELEMENT.appendChild(secondary_div);
         start ++;
 
@@ -441,6 +443,15 @@ function create_past_fixtures_div_element(playerID){
     return MAIN_DIV_ELEMENT;
 }
 
+function get_fixture(fixtureID, teamID){
+
+    for (let each_fixture of ALL_PAST_FIXTURES){
+        if (each_fixture.id == fixtureID){
+            return (each_fixture.team_h == teamID) ? `${ID_TEAM_DICT[each_fixture.team_a]}(A)` : `${ID_TEAM_DICT[each_fixture.team_h]}(H)`
+        }
+    }
+    return "Blank"
+}
 function create_player_name_id_dict(){
 
     for (let player_object of BOOTSTRAP_RESPONSE["elements"]){

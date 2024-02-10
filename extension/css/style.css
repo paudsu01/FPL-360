@@ -2,7 +2,7 @@
     position: relative;
 }
 
-.fixture-info, .point-info{
+.fixture-info{
     visibility: hidden;
     text-align: center;
     width: 60px;
@@ -14,7 +14,20 @@
     left: 50%;
     margin-left: -30px;
   }
-  
+
+ .point-info{
+    visibility: hidden;
+    text-align: center;
+    width: 60px;
+    padding: 5px;
+    border-radius: 6px;
+    position: absolute;
+    z-index: 1;
+    top: 120%;
+    left: 50%;
+    margin-left: -30px;
+  }
+   
   .fixture-color-div:hover .fixture-info {
     visibility: visible;
   }
