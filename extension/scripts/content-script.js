@@ -382,6 +382,11 @@ async function modifyDOM(modifySidebar=true){
             if (URL_CODE == 'transfers'){
                 // show net transfers data
                 let player_value_element = playerElement.querySelector("[class^='PitchElementData__ElementValue']");
+                try {
+                    player_value_element.removeChild(player_value_element.querySelector(".price-change-info"));}
+                catch (err) {
+                    // type error if query selector doesn't return a node
+                }
                 let netTransfersElement = create_net_transfers_and_profit_loss_element(PLAYERW_WEB_NAME_TO_ID[player_web_name]);
                 player_value_element.appendChild(netTransfersElement);
             }
@@ -403,13 +408,47 @@ async function modifyDOM(modifySidebar=true){
     }
 }
 
+function get_profit_loss(playerID){
+
+    for (let pick of USER_DATA.picks){
+        if (pick.element == playerID){
+            return (pick.selling_price - pick.purchase_price) / 10
+        }
+    }
+    return 0;
+}
+function create_profit_loss_element(playerID){
+
+    let profit_loss_element = document.createElement("div");
+    profit_loss_element.classList.add("profit-loss-info");
+    profit_loss_element.innerText = '(';
+
+    let profit_loss = get_profit_loss(playerID);
+    let color = (profit_loss >= 0) ? "green" : "red";
+    let triangle = (profit_loss >= 0) ? "▲" : "▼";
+
+    let triangle_element = document.createElement("span");
+    triangle_element.style = `color: ${color}`
+    triangle_element.innerText = triangle;
+    console.log(triangle_element);
+
+    let price_element = document.createElement("span");
+    price_element.innerText = profit_loss + ')';
+
+    profit_loss_element.appendChild(triangle_element);
+    profit_loss_element.appendChild(price_element);
+
+    return profit_loss_element;
+
+}
 function create_net_transfers_and_profit_loss_element(playerID){
     
     let MAIN_DIV_ELEMENT = document.createElement("div");
     MAIN_DIV_ELEMENT.classList.add("price-change-info");
+    MAIN_DIV_ELEMENT.style = 'display: inline-block; font-size:smaller;';
 
-    let profit_loss_element = document.createElement("span");
-    profit_loss_element.classList.add("profit-loss-info");
+    let profit_loss_element = create_profit_loss_element(playerID);
+
     // up / down triangle
     // price difference 
     // tooltip
