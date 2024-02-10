@@ -458,12 +458,20 @@ function create_net_transfers_element(playerID){
     let transfers_out = player_data.transfers_out_event;
 
     let color = ((transfers_in - transfers_out) >= 0) ? "green" : "red";
-    let degree = ((transfers_in - transfers_out) >= 0) ? "90deg" : "-90deg";
-    net_transfers_element.style = `margin-left:2px;display: inline-block; rotate:${degree}; font-size:7px; margin-top:2px; float:left; letter-spacing:-1px; color:${color}`;
+    let degree = ((transfers_in - transfers_out) >= 0) ? 90 : -90;
+    net_transfers_element.style = `margin-left:2px;display: inline-block; rotate:${degree}deg; font-size:7px; margin-top:2px; float:left; letter-spacing:-1px; color:${color}`;
 
     let price_change_info = get_price_change_info_in_arrows(transfers_in-transfers_out);
-
     net_transfers_element.innerText = price_change_info
+
+    // add tooltip
+    color = ((transfers_in - transfers_out) >= 0) ? "rgb(1, 252, 122)" : "red";
+    let tooltip = document.createElement("span");
+    tooltip.classList.add("net-transfers-info-tooltip");
+        tooltip.style = `letter-spacing: normal;background : ${color}; color: ${(color == 'red') ? "white" : "black"}; padding: 2px; border: 0.5px solid black; rotate:${-degree}deg`
+        tooltip.innerText = `Net transfers: ${transfers_in - transfers_out}`;
+    net_transfers_element.appendChild(tooltip);
+
     return net_transfers_element;
 
 }
