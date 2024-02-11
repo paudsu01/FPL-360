@@ -35,7 +35,7 @@ window.onload = async function (){
         let element = document.querySelector(`#${id}`);
         element.checked = true;
         try {
-            if (settings[id] != true) element.checked = false;
+            if (settings[id] == false) element.checked = false;
         } catch (err){
             // if err raised, no settings stored in the extension storage
             // this means all the features are turned on
