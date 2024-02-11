@@ -1,1 +1,53 @@
-<html></html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPl-360</title>
+    <link rel="stylesheet" href="css/popup-style.css">
+    <script src="scripts/popup.js"></script>
+</head>
+<body>
+
+    <div class="logo">
+        <img src="img/icons/128x128.png" alt="Logo">
+    </div>
+    <div class="container">
+        <div class="item">
+            <!--Button for turning on/off away jerseys-->
+            <input type="checkbox" id="away-home-jersey"/>
+            <span>Show away jersey on away fixtures</span>
+        </div>
+        <div class="break"></div> <!-- break -->
+        <div class="item">
+            <!--Button for turning on/off next few fixtures-->
+            <input type="checkbox" id="next-few-fixtures"/>
+            <span>Show player's upcoming fixtures on my-team & transfers page</span>
+        </div>
+        <div class="break"></div> <!-- break -->
+        <div class="item">
+            <!--Button for turning on/off next last few GW points-->
+            <input type="checkbox" id="last-few-gw"/>
+            <span>Show player's last five gameweek points</span>
+        </div>
+        <div class="break"></div> <!-- break -->
+        <div class="item">
+            <!--Button for turning on/off display of profit/loss in transfers page-->
+            <input type="checkbox" id="profit-loss"/>
+            <span>Show profit/loss made on a player in transfers page</span>
+        </div>
+        <div class="break"></div> <!-- break -->
+        <div class="item">
+            <!--Button for turning on/off net transfers arrow-->
+            <input type="checkbox" id="net-transfers"/>
+            <span>Show net-transfers in the form of arrows in transfers page</span>
+        </div>
+    </div>
+    <div class="save-button-container">
+        <button type="button">Save</button>
+    </div>
+    <div class="message-container">
+        <span id="message"></span>
+    </div>
+    
+</body>
+</html>

@@ -1,0 +1,40 @@
+html {
+    width: 250px;
+    height: 280px;
+    background-image: url("../img/background.webp");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    font-size: large;
+}
+
+.logo, .save-button-container, .message-container {
+    justify-content: center;
+    display: flex;
+}
+
+img {
+    width: 50px;
+    height: 50px;
+}
+
+button {
+    transition: box-shadow 300ms ease-in-out, color 300ms ease-in-out;
+    box-sizing: border-box;
+    background-color: transparent;
+    border: 2px solid purple;
+    border-radius: 0.6em;
+    color: purple;
+    cursor: pointer;
+    display: flex;
+    margin: 5px;
+    text-transform: uppercase;
+  }
+button:hover {
+    box-shadow: 0 0 40px 40px lightskyblue inset;
+  }
+
+#message{
+    font-style: italic;
+}
+
