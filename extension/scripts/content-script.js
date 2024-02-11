@@ -699,7 +699,6 @@ function setup_mutation_observer_for_url_change(){
   const observer = new MutationObserver(()=>{
     if (trim_url(window.location.href) != CURRENT_URL){
 
-        console.log("[URL-change] being called");
         // disconnect pitch oberser since main sets it again
         if (pitch_observer) pitch_observer.disconnect();
         if (bench_observer) bench_observer.disconnect();
@@ -790,7 +789,6 @@ function setup_mutation_observer_for_pitch_changes(){
     pitch_observer = new MutationObserver(()=>{
         // another observer callback handles route changes
         if (trim_url(window.location.href) != CURRENT_URL) return;
-        console.log("[PITCH-change] being called");
         pitch_observer.disconnect();
         // Swap kits if needed after element discovered
         waitForElement(document.body, "[data-testid='pitch']").then(()=>{
@@ -815,11 +813,9 @@ async function main(){
     // return if not proper entry url
     is_a_proper_link = check_if_url_is_a_valid_link()
     if (!is_a_proper_link){
-        console.log("no need to inject");
         return;
     }
 
-    console.log("need to inject yes");
     
      // if url is points then get gameweek from url
      // if pick team then use api to get chosen gameweek
