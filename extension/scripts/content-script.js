@@ -280,19 +280,23 @@ function modify_DOM_for_sidebar(){
             let teamCode = required_td.querySelector("span").innerText;
             
             // avoid goalies for jersey swap
-            if (required_td.querySelectorAll("span")[1].innerText !== "GKP"){
+            if ((!(ALL_SETTINGS["away-home-jersey"] == false)) && required_td.querySelectorAll("span")[1].innerText !== "GKP"){
 
                 // Change img attribute to swap for away jersey as necessary
                 modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
 
             }
 
-            let fixtures_div = required_td.querySelector(".upcoming-fixtures");
-            if (fixtures_div) fixtures_div.remove();
+            if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
 
-            fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
-            // inject the next five fixtures
-            required_td.appendChild(fixtures_div);
+                let fixtures_div = required_td.querySelector(".upcoming-fixtures");
+                if (fixtures_div) fixtures_div.remove();
+
+                fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
+                // inject the next five fixtures
+                required_td.appendChild(fixtures_div);
+
+            }
 
             try {
                 tr_element.querySelector(".net-transfers-info").remove();
@@ -300,12 +304,14 @@ function modify_DOM_for_sidebar(){
             }
             // inject the net transfers arrow
             let name_div = required_td.querySelector("[class^='ElementInTable__Name']");
-            let net_transfers_element = create_net_transfers_element(PLAYER_WEB_NAME_TO_ID[name_div.innerText], tooltip="div");
 
-            net_transfers_element.style.fontSize = '12px';
-            net_transfers_element.style.float = '';
-            required_td.nextSibling.appendChild(net_transfers_element);
+            if (!(ALL_SETTINGS['net-transfers'] == false)){
 
+                let net_transfers_element = create_net_transfers_element(PLAYER_WEB_NAME_TO_ID[name_div.innerText], tooltip="div");
+                net_transfers_element.style.fontSize = '12px';
+                net_transfers_element.style.float = '';
+                required_td.nextSibling.appendChild(net_transfers_element);
+            }
         }
 
     }
@@ -360,30 +366,34 @@ async function modifyDOM(modifySidebar=true){
         let teamCode = TEAM_NAME_TO_CODE_DICT[teamName];
 
         try {
-            // index 22 is for the bench goalie
-            if (currentIndex != secondGoalieValue && currentIndex != startValue) {
+            if (!(ALL_SETTINGS["away-home-jersey"] == false)){
+                // index 22 is for the bench goalie
+                if (currentIndex != secondGoalieValue && currentIndex != startValue) {
 
-                let sourceElement= playerElement.querySelector("source");
+                    let sourceElement= playerElement.querySelector("source");
 
-                let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
+                    let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
 
-                modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode);
+                    modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode);
+                }
             }
 
         } catch (err){
             // error when no a player removed and jo jersey there to know which the player is
         }
+
         if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
 
-            // inject their next 5 fixtures after modifying img attribute if "my-team" page
-            try {
-                playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
-            catch (err) {
-                // type error if query selector doesn't return a node
+            if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
+                // inject their next 5 fixtures after modifying img attribute if "my-team" page
+                try {
+                    playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
+                catch (err) {
+                    // type error if query selector doesn't return a node
+                }
+                var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
+                playerElement.appendChild(fixtures_div);
             }
-            var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
-            playerElement.appendChild(fixtures_div);
-        
         
             var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
             if (!(ALL_SETTINGS["last-few-gw"] == false)){
@@ -507,8 +517,10 @@ function create_net_transfers_and_profit_loss_element(playerID){
         var profit_loss_element = create_profit_loss_element(playerID);
         MAIN_DIV_ELEMENT.appendChild(profit_loss_element);
     }
-    let net_transfers_element = create_net_transfers_element(playerID);
-    MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
+    if (!(ALL_SETTINGS["net-transfers"] == false)){
+        let net_transfers_element = create_net_transfers_element(playerID);
+        MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
+    }
     return MAIN_DIV_ELEMENT;
 }
 
@@ -638,6 +650,7 @@ async function fetch_team_name_away_fixture_dict_and_modify_DOM(){
 
     let response = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
     let fixtures = await response.json();
+    TEAM_AWAY_DICT = {};
     for (let fixture of fixtures){
         let home_team = ID_TEAM_DICT[fixture["team_h"]];
         let away_team = ID_TEAM_DICT[fixture["team_a"]];
@@ -817,7 +830,7 @@ async function main(){
      // make a dict that maps from teamName to away fixture value(true if the team has a next away fixture else false)
      // and call the modifyDOM function after done ( The modifyDOM function is inside this function since the function is async and 
      // we need the fixture dict ready before we swap kits)
-     if (URL_CODE != "my-team"){
+     if (URL_CODE != "my-team" && (!(ALL_SETTINGS["away-home-jersey"] == false))){
         fetch_team_name_away_fixture_dict_and_modify_DOM();
      } else {
         // Swap kits if needed after element discovered
