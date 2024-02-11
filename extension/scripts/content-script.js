@@ -1,5 +1,6 @@
 // Variable declaration
 
+var ALL_SETTINGS = {};
 // chosen gameweek 
 var CHOSEN_GAMEWEEK=-1;
 // Team id to name(teamn code e.g ARS for arsenal)
@@ -303,7 +304,6 @@ function modify_DOM_for_sidebar(){
 
             net_transfers_element.style.fontSize = '12px';
             net_transfers_element.style.float = '';
-            console.log(net_transfers_element);
             required_td.nextSibling.appendChild(net_transfers_element);
 
         }
@@ -384,15 +384,18 @@ async function modifyDOM(modifySidebar=true){
             var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
             playerElement.appendChild(fixtures_div);
         
-            // inject their past 4 fixtures data after (Last few gameweeks points)
-            try {
-                playerElement.removeChild(playerElement.querySelector(".past-fixtures"));}
-            catch (err) {
-                // type error if query selector doesn't return a node
-            }
+        
             var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
-            var past_fixtures_div = create_past_fixtures_div_element(PLAYER_WEB_NAME_TO_ID[player_web_name], TEAM_ID_DICT[teamCode]);
-            playerElement.appendChild(past_fixtures_div);
+            if (!(ALL_SETTINGS["last-few-gw"] == false)){
+                // inject their past 5 fixtures data after (Last few gameweeks points)
+                try {
+                    playerElement.removeChild(playerElement.querySelector(".past-fixtures"));}
+                catch (err) {
+                    // type error if query selector doesn't return a node
+                }
+                var past_fixtures_div = create_past_fixtures_div_element(PLAYER_WEB_NAME_TO_ID[player_web_name], TEAM_ID_DICT[teamCode]);
+                playerElement.appendChild(past_fixtures_div);
+            }
 
             if (URL_CODE == 'transfers'){
                 // show net transfers data
@@ -500,10 +503,11 @@ function create_net_transfers_and_profit_loss_element(playerID){
     MAIN_DIV_ELEMENT.classList.add("price-change-info");
     MAIN_DIV_ELEMENT.style = 'display: inline-block; font-size:smaller;';
 
-    let profit_loss_element = create_profit_loss_element(playerID);
+    if (!(ALL_SETTINGS["profit-loss"] == false)){
+        var profit_loss_element = create_profit_loss_element(playerID);
+        MAIN_DIV_ELEMENT.appendChild(profit_loss_element);
+    }
     let net_transfers_element = create_net_transfers_element(playerID);
-
-    MAIN_DIV_ELEMENT.appendChild(profit_loss_element);
     MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
     return MAIN_DIV_ELEMENT;
 }
@@ -690,11 +694,10 @@ function setup_mutation_observer_for_url_change(){
         CURRENT_URL = trim_url(window.location.href);
 
         // fetch latest team of the user if user navigated to transfers page
-        if (CURRENT_URL.endsWith("transfers")){
+        if (CURRENT_URL.endsWith("transfers") && (!(ALL_SETTINGS["profit-loss"] == false))){
             fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
                 response=>response.json()).then((response)=>{
                     USER_DATA = response;
-                    console.log(USER_DATA);
                     main();
                     })
         } else {
@@ -709,6 +712,10 @@ function setup_mutation_observer_for_url_change(){
 }
 async function initContentScript(){
  
+    let all_ids = ["away-home-jersey", "next-few-fixtures", "last-few-gw", "profit-loss", "net-transfers"];
+    // if ALL_SETTINGS is empty, then every feature is turned on
+    ALL_SETTINGS = await chrome.storage.local.get(all_ids);
+
     try {
     let [awayResponse, bootstrapResponse, FutureFixturesResponse, PastFixturesResponse] = await Promise.all([
         // link to get team name and away jersey link
@@ -725,14 +732,17 @@ async function initContentScript(){
     ALL_FUTURE_FIXTURES = await FutureFixturesResponse.json();
     ALL_PAST_FIXTURES = await PastFixturesResponse.json();
 
-    // fetch the last few events data
-    let gameweek_value = get_current_gameweek()   ;
-    let end = Math.max(1, gameweek_value - 4);
-    while (gameweek_value >= end){
-        let response = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek_value}/live/`);
-        LAST_FEW_EVENTS_DATA[gameweek_value] = await response.json();
-        LAST_GAMEWEEK_WITH_DATA = gameweek_value;
-        gameweek_value --;
+    if (!(ALL_SETTINGS["last-few-gw"] == false)){
+
+        // fetch the last few events data
+        let gameweek_value = get_current_gameweek()   ;
+        let end = Math.max(1, gameweek_value - 4);
+        while (gameweek_value >= end){
+            let response = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek_value}/live/`);
+            LAST_FEW_EVENTS_DATA[gameweek_value] = await response.json();
+            LAST_GAMEWEEK_WITH_DATA = gameweek_value;
+            gameweek_value --;
+        }
     }
 
      // make a dict of team id to team code and 
@@ -741,15 +751,18 @@ async function initContentScript(){
      
      // create dict from player web name to id
      create_player_dict();
-     
 
     waitForElement(document.body, "[href^='/entry/']").then(()=>{
             USER_ID = get_user_id(trim_url(document.querySelector("[href^='/entry/']").getAttribute("href")));
-            fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
-                response=>response.json()).then((response)=>{
-                    USER_DATA = response;
-                    main();
+            if (!(ALL_SETTINGS["profit-loss"] == false)){
+                fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
+                    response=>response.json()).then((response)=>{
+                        USER_DATA = response;
+                        main();
                 })
+            } else {
+                main();
+            }
         })
 
     } catch (err){
