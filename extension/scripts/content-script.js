@@ -16,6 +16,7 @@ var TEAM_NAME_TO_CODE_DICT={};
 // Team code to next 5 fixtures
 var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 // player webname to player id mapping
+// the value is going to be a list since different id players can have the same web name
 var PLAYER_WEB_NAME_TO_ID = {};
 // player id to player data dict
 var PLAYER_ID_TO_DATA = {};
@@ -53,6 +54,19 @@ var bench_observer;
 
 // Functions
 
+// returns player's id based on their webName and teamName
+function get_player_id(webName, teamID){
+
+    let playersList = PLAYER_WEB_NAME_TO_ID[webName];
+    if (playersList.length == 1) return playersList[0][0];
+
+    for (let playerList of playersList){
+        if (playerList[1] == teamID){
+            return playerList[0];
+        }
+    }
+
+}
 // trim url to remove query parameters and hashtags from end of url while also
 function trim_url(link){
 
@@ -307,7 +321,9 @@ function modify_DOM_for_sidebar(){
 
             if (!(ALL_SETTINGS['net-transfers'] == false)){
 
-                let net_transfers_element = create_net_transfers_element(PLAYER_WEB_NAME_TO_ID[name_div.innerText], tooltip="div");
+
+                let playerID = get_player_id(name_div.innerText, TEAM_ID_DICT[teamCode]);
+                let net_transfers_element = create_net_transfers_element(playerID, tooltip="div");
                 net_transfers_element.style.fontSize = '12px';
                 net_transfers_element.style.float = '';
                 required_td.nextSibling.appendChild(net_transfers_element);
@@ -403,7 +419,8 @@ async function modifyDOM(modifySidebar=true){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                var past_fixtures_div = create_past_fixtures_div_element(PLAYER_WEB_NAME_TO_ID[player_web_name], TEAM_ID_DICT[teamCode]);
+                let player_id = get_player_id(player_web_name, TEAM_ID_DICT[teamCode]);
+                var past_fixtures_div = create_past_fixtures_div_element(player_id, TEAM_ID_DICT[teamCode]);
                 playerElement.appendChild(past_fixtures_div);
             }
 
@@ -415,7 +432,8 @@ async function modifyDOM(modifySidebar=true){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                let netTransfersElement = create_net_transfers_and_profit_loss_element(PLAYER_WEB_NAME_TO_ID[player_web_name]);
+                let player_id = get_player_id(player_web_name, TEAM_ID_DICT[teamCode]);
+                let netTransfersElement = create_net_transfers_and_profit_loss_element(player_id);
                 player_value_element.appendChild(netTransfersElement);
             }
         }
@@ -594,7 +612,11 @@ function create_player_dict(){
     // creates player web name to id object and
     // creates player id to player data object
     for (let player_object of BOOTSTRAP_RESPONSE["elements"]){
-        PLAYER_WEB_NAME_TO_ID[player_object.web_name] = player_object.id;
+
+        // create a empty list if no such key exists no far
+        if (PLAYER_WEB_NAME_TO_ID[player_object.web_name] === undefined) PLAYER_WEB_NAME_TO_ID[player_object.web_name] = [];
+
+        PLAYER_WEB_NAME_TO_ID[player_object.web_name].push([player_object.id, player_object.team]);
         PLAYER_ID_TO_DATA[player_object.id] = player_object;
     }
 
