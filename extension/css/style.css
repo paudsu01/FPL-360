@@ -14,18 +14,36 @@
     left: 50%;
     margin-left: -30px;
   }
- 
-  .net-transfers-info-tooltip{
+.net-transfers-info-tooltip{
     margin-left : -12px;
     font-size: 10px;
   }
 
-  .fixture-color-div:hover .fixture-info {
+.fixture-color-div:hover .fixture-info {
     visibility: visible;
   }
-  .point-div:hover .point-info {
+.point-div:hover .point-info {
     visibility: visible;
   }
-  .net-transfers-info:hover .net-transfers-info-tooltip{
+.net-transfers-info:hover .net-transfers-info-tooltip{
     visibility: visible;
+  }
+
+.expected-points-div{
+    display: block;
+    position: absolute;
+    border: 1px black solid;
+    top: 20%;
+    left: 10%;
+  }
+.expected-points-xp-div{
+    background: rgb(55, 0, 60);
+    color: white;
+    font-size: 10px;
+    padding: 2px;
+  }
+
+.expected-points-value-div{
+    padding: 3px;
+    font-size: smaller;
   }
