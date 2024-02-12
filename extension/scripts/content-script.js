@@ -572,7 +572,8 @@ function create_past_fixtures_div_element(playerID, teamID){
 
     while (start <= end){
 
-        let stats = LAST_FEW_EVENTS_DATA[start]["elements"][playerID-1]["stats"]
+        let player_event_data = get_player_event_data(start, playerID);
+        let stats = player_event_data["stats"];
         let points = stats.total_points;
 
         // div to show points
@@ -587,7 +588,7 @@ function create_past_fixtures_div_element(playerID, teamID){
         info.classList.add("point-info");
         info.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
         // get fixture info : opposition team and home/away info
-        let fixture = get_fixture(LAST_FEW_EVENTS_DATA[start]["elements"][playerID-1]["explain"][0].fixture, teamID)
+        let fixture = get_fixture(player_event_data["explain"][0].fixture, teamID)
         // show Gameweek, team, xG, xA
         info.innerText = `GW ${start} ${fixture} xG ${stats.expected_goals} xA ${stats.expected_assists}`
         secondary_div.appendChild(info);
@@ -608,6 +609,12 @@ function get_fixture(fixtureID, teamID){
     }
     return "Blank"
 }
+function get_player_event_data(gameweek, playerID){
+
+    let all_players = LAST_FEW_EVENTS_DATA[gameweek]["elements"];
+    return all_players.find((player)=>{return player.id == playerID});
+}
+
 function create_player_dict(){
     // creates player web name to id object and
     // creates player id to player data object
