@@ -753,7 +753,7 @@ function setup_mutation_observer_for_url_change(){
 }
 async function initContentScript(){
  
-    let all_ids = ["away-home-jersey", "next-few-fixtures", "last-few-gw", "profit-loss", "net-transfers"];
+    let all_ids = ["away-home-jersey", "next-few-fixtures", "last-few-gw", "profit-loss", "net-transfers", "expected-points"];
     // if ALL_SETTINGS is empty, then every feature is turned on
     ALL_SETTINGS = await chrome.storage.local.get(all_ids);
 
