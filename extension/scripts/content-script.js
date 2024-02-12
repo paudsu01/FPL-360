@@ -412,6 +412,7 @@ async function modifyDOM(modifySidebar=true){
             }
         
             var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
+            let player_id = get_player_id(player_web_name, TEAM_ID_DICT[teamCode]);
             if (!(ALL_SETTINGS["last-few-gw"] == false)){
                 // inject their past 5 fixtures data after (Last few gameweeks points)
                 try {
@@ -419,7 +420,6 @@ async function modifyDOM(modifySidebar=true){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                let player_id = get_player_id(player_web_name, TEAM_ID_DICT[teamCode]);
                 var past_fixtures_div = create_past_fixtures_div_element(player_id, TEAM_ID_DICT[teamCode]);
                 playerElement.appendChild(past_fixtures_div);
             }
@@ -432,9 +432,23 @@ async function modifyDOM(modifySidebar=true){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                let player_id = get_player_id(player_web_name, TEAM_ID_DICT[teamCode]);
                 let netTransfersElement = create_net_transfers_and_profit_loss_element(player_id);
                 player_value_element.appendChild(netTransfersElement);
+
+            // the url code will now only be my-team so no need to check for that
+            }
+
+            if (!(ALL_SETTINGS["expected-points"] == false)){
+
+                try {
+                    playerElement.removeChild(playerElement.querySelector(".expected-points-div"));}
+                catch (err) {
+                    // type error if query selector doesn't return a node
+                }
+                // get expected points
+                let expected_points = PLAYER_ID_TO_DATA[player_id]["ep_next"];
+                let expected_points_div = create_expected_points_div(expected_points);
+                playerElement.appendChild(expected_points_div);
             }
         }
 
@@ -454,6 +468,28 @@ async function modifyDOM(modifySidebar=true){
     }
 }
 
+function create_expected_points_div(expected_points){
+
+    let main_div = document.createElement("div");
+    main_div.classList.add("expected-points-div");
+    main_div.style = "display: block"
+
+    let first_div = document.createElement("div");
+    first_div.classList.add("expected-points-xp-div");
+    first_div.innerText = "xP"
+
+    let second_div = document.createElement("div");
+    second_div.classList.add("expected-points-value-div");
+    let [background, color] = get_color_for_points(expected_points);
+    second_div.style.background = background;
+    second_div.style.color = color;
+    second_div.innerText = expected_points;
+
+    for (let div of [first_div, second_div]){
+        main_div.appendChild(div);
+    }
+    return main_div;
+}
 function get_profit_loss(playerID){
 
     for (let pick of USER_DATA.picks){
@@ -542,10 +578,7 @@ function create_net_transfers_and_profit_loss_element(playerID){
     return MAIN_DIV_ELEMENT;
 }
 
-function create_past_fixtures_div_element(playerID, teamID){
-
-    let get_color_for_points = (points)=>{
-
+function get_color_for_points(points){
         //        0 -2 : no color ( red)
         //        3 - 5 : no color
         //       6 - 8 : green
@@ -557,8 +590,9 @@ function create_past_fixtures_div_element(playerID, teamID){
         else if (points <= 8) return FDR_TO_COLOR_CODE[2];
         else if (points <= 12) return ["rgb(64,224,208)", "black"];
         else return ["rgb(128, 98, 214)", "white"];
+}
 
-    }
+function create_past_fixtures_div_element(playerID, teamID){
 
     let MAIN_DIV_ELEMENT = document.createElement("div");
     MAIN_DIV_ELEMENT.classList.add("past-fixtures");
@@ -753,7 +787,7 @@ function setup_mutation_observer_for_url_change(){
 }
 async function initContentScript(){
  
-    let all_ids = ["away-home-jersey", "next-few-fixtures", "last-few-gw", "profit-loss", "net-transfers"];
+    let all_ids = ["away-home-jersey", "next-few-fixtures", "last-few-gw", "profit-loss", "net-transfers", "expected-points"];
     // if ALL_SETTINGS is empty, then every feature is turned on
     ALL_SETTINGS = await chrome.storage.local.get(all_ids);
 
