@@ -14,11 +14,17 @@
   },
   "content_scripts": [
     {
-      "js": ["scripts/content-script.js"],
+      "js": ["scripts/helper-content-script.js", "scripts/fantasy-content-script.js"],
       "css":["css/style.css"],
       "matches": ["https://fantasy.premierleague.com/*"],
       "run_at": "document_end"
-    } 
+    },
+    {
+      "js": ["scripts/helper-content-script.js", "scripts/draft-content-script.js"],
+      "css":["css/style.css"],
+      "matches": ["https://draft.premierleague.com/*"],
+      "run_at": "document_end"
+    }
   ],
   "permissions": ["storage"]
 }
