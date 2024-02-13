@@ -38,7 +38,7 @@ var CURRENT_SEASON;
 // User's team id
 var USER_ID;
 // User's team data
-var USER_DATA;
+var USER_DATA ={};
 // Fixture difficulty rating to color code
 var FDR_TO_COLOR_CODE={
     1: ["rgb(55, 85, 35)", "black"],
@@ -492,9 +492,11 @@ function create_expected_points_div(expected_points){
 }
 function get_profit_loss(playerID){
 
-    for (let pick of USER_DATA.picks){
-        if (pick.element == playerID){
-            return (pick.selling_price - pick.purchase_price) / 10
+    if (!(USER_DATA.picks === undefined)){
+        for (let pick of USER_DATA.picks){
+            if (pick.element == playerID){
+                return (pick.selling_price - pick.purchase_price) / 10
+            }
         }
     }
     return 0;
@@ -770,15 +772,18 @@ function setup_mutation_observer_for_url_change(){
 
         // fetch latest team of the user if user navigated to transfers page
         if (CURRENT_URL.endsWith("transfers") && (!(ALL_SETTINGS["profit-loss"] == false))){
-            fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
-                response=>response.json()).then((response)=>{
-                    USER_DATA = response;
-                    main();
+            if (!(USER_ID === undefined)){
+                fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
+                    response=>response.json()).then((response)=>{
+                        USER_DATA = response;
+                        main();
                     })
+            } else {
+                    main()
+            }
         } else {
             main();
         }
-
     }
   })
 
@@ -827,16 +832,22 @@ async function initContentScript(){
      // create dict from player web name to id
      create_player_dict();
 
-    waitForElement(document.body, "[href^='/entry/']").then(()=>{
-            USER_ID = get_user_id(trim_url(document.querySelector("[href^='/entry/']").getAttribute("href")));
-            if (!(ALL_SETTINGS["profit-loss"] == false)){
-                fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
-                    response=>response.json()).then((response)=>{
-                        USER_DATA = response;
-                        main();
-                })
-            } else {
+    waitForElement(document.body, "[class^='Navigation__StyledUL']").then(()=>{
+            try {
+                USER_ID = get_user_id(trim_url(document.querySelector("[class^='Navigation__StyledUL']").querySelector("[href^='/entry/']").getAttribute("href")));
+                if (!(ALL_SETTINGS["profit-loss"] == false)){
+                    fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
+                        response=>response.json()).then((response)=>{
+                            USER_DATA = response;
+                            main();
+                    })
+                } else {
+                    main();
+                }
+            } catch(err) {
                 main();
+                // this happens when creates their account at the beginning since they will have no previous events
+                // no need to fetch their data for profit/loss
             }
         })
 
