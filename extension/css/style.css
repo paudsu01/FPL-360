@@ -1,4 +1,4 @@
-.fixture-color-div, .point-div, .net-transfers-info{
+.fixture-color-div, .point-div{
     position: relative;
 }
 
@@ -46,4 +46,9 @@
 .expected-points-value-div{
     padding: 3px;
     font-size: smaller;
+  }
+
+  .net-transfers-info{
+    position: relative !important;
+    z-index: 1;
   }
