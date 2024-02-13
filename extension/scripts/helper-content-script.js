@@ -3,6 +3,10 @@
 
 // variables
 
+// Team code to true if away fixture in current gameweek else false
+var TEAM_AWAY_DICT={};
+// chosen gameweek 
+var CHOSEN_GAMEWEEK=-1;
 // Type of url : "transfers", "my-team" and "event"
 var URL_CODE = '';
 // window.location.href value when content-script is loaded
@@ -45,6 +49,20 @@ function trim_url(link){
     let url = link.split('?')[0].split('#')[0];
     if (url[url.length -1] == '/') url = url.slice(0, url.length-1);
     return url;
+
+}
+
+// returns player's id based on their webName and teamName
+function get_player_id(webName, teamID){
+
+    let playersList = PLAYER_WEB_NAME_TO_ID[webName];
+    if (playersList.length == 1) return playersList[0][0];
+
+    for (let playerList of playersList){
+        if (playerList[1] == teamID){
+            return playerList[0];
+        }
+    }
 
 }
 

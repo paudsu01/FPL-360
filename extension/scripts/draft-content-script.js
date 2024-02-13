@@ -1,54 +1,85 @@
 // Variable declaration
 // Team code to next 5 fixtures
 var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
-var ALL_FUTURE_FIXTURES;
-// API response from "https://fantasy.premierleague.com/api/fixtures?future=0
-var ALL_PAST_FIXTURES;
-// User's team id
-var USER_ID;
-// User's team data
-var USER_DATA ={};
 // observer for pitch changes
 var pitch_observer;
-// observer for changes in sidebar in transfers page
-var bench_observer;
 
 // Functions
 
+async function fetch_events(type, object, data_to_store){
+    // fetch the last few events data
+    let gameweek_value = (type == "next") ? get_current_gameweek()+1: get_current_gameweek();
+    let end = (type == "next") ? Math.max(1, gameweek_value + 3) : Math.max(1, gameweek_value - 4);
+
+    if (end > gameweek_value){
+        [gameweek_value, end] = [end, gameweek_value];
+    }
+
+    while (gameweek_value >= end){
+        let response = await fetch(`https://draft.premierleague.com/api/event/${gameweek_value}/live`);
+        object[gameweek_value] = await response.json();
+        data_to_store = gameweek_value;
+        gameweek_value --;
+    }
+}
+
+function waitForElement(parentElement, selector){
+
+    return new Promise((resolve, reject)=>{
+
+        if (parentElement.querySelector(selector)) {
+            resolve();
+        } else {
+
+            const observer = new MutationObserver(mutations => {
+                if (parentElement.querySelector(selector)) {
+                    observer.disconnect();
+                    resolve();
+                }
+            });
+    
+            observer.observe(parentElement, {
+                attributes: true,
+                childList: true,
+                subtree: true
+            });
+        }
+
+    }
+
+    )
+}
 function get_increment_second_goalie_indexes(){
     if (URL_CODE == "event"){
         return [0, 2, 22]
     } else if (URL_CODE == "my-team"){
         return [0, 3, 33]  
-    } else {
-        return [0, 3, 3]
     }
 }
 
 async function check_if_away_jersey_needed(playerButtonElement, teamCode){
 
-        let awayJerseyNeeded = false;
+    let awayJerseyNeeded = false;
 
-        if (URL_CODE == 'event' || URL_CODE == 'transfers'){
-            if (teamCode in TEAM_AWAY_DICT && TEAM_AWAY_DICT[teamCode] === true){
-                // Modify attributes to handle re-sizing of the window for these images
-                awayJerseyNeeded = true;
-            }
-        } else {
-
-            // element might take time to load
-            await waitForElement(playerButtonElement, "span")
-
-            // only pick first team if double gameweek
-            let oppositionTeam = playerButtonElement.querySelector("span").innerText.split(',')[0];
-            let pattern = new RegExp(/\([HA]\)/);
-            let matches = oppositionTeam.match(pattern);
-            if (matches && matches[0] == '(A)'){
-                awayJerseyNeeded = true;
-            }
+    if (URL_CODE == 'event' || URL_CODE == 'transactions'){
+        if (teamCode in TEAM_AWAY_DICT && TEAM_AWAY_DICT[teamCode] === true){
+            // Modify attributes to handle re-sizing of the window for these images
+            awayJerseyNeeded = true;
         }
+    } else {
 
-        return awayJerseyNeeded
+        // element might take time to load
+        await waitForElement(playerButtonElement, "span")
+        // only pick first team if double gameweek
+        let oppositionTeam = playerButtonElement.querySelector("span").innerText.split(',')[0];
+        let pattern = new RegExp(/\([HA]\)/);
+        let matches = oppositionTeam.match(pattern);
+        if (matches && matches[0] == '(A)'){
+            awayJerseyNeeded = true;
+        }
+    }
+
+    return awayJerseyNeeded
 
 }
 function create_next_five_fixtures_object(teamID, start){
@@ -185,73 +216,11 @@ function create_next_five_fixtures_div_element(teamID, colorOnly = false){
    return MAIN_DIV_ELEMENT;
 }
 
-function modify_DOM_for_sidebar(){
-
-    const SIDEBAR = document.querySelector("[class^='SquadBase__PusherSecondary']");
-    // The player's are divided into their position and 
-    // each position has a table of it's own where player info is present inside each tr tag
-    let all_tables = SIDEBAR.querySelectorAll("table");
-    for (let table of all_tables){
-        // the tr element for all players is inside the tbody of each table
-        let all_tr_elements = table.querySelector("tbody").querySelectorAll("tr");
-
-        for (let tr_element of all_tr_elements){
-            
-            // The 2nd(1st index) td is what we are looking for (for image and other necessary stuff)
-            let required_td = tr_element.querySelectorAll("td")[1];
-            let teamCode = required_td.querySelector("span").innerText;
-            
-            // avoid goalies for jersey swap
-            if ((!(ALL_SETTINGS["away-home-jersey"] == false)) && required_td.querySelectorAll("span")[1].innerText !== "GKP"){
-
-                // Change img attribute to swap for away jersey as necessary
-                modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
-
-            }
-
-            if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
-
-                let fixtures_div = required_td.querySelector(".upcoming-fixtures");
-                if (fixtures_div) fixtures_div.remove();
-
-                fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
-                // inject the next five fixtures
-                required_td.appendChild(fixtures_div);
-
-            }
-
-            try {
-                tr_element.querySelector(".net-transfers-info").remove();
-            } catch (error) {
-            }
-            // inject the net transfers arrow
-            let name_div = required_td.querySelector("[class^='ElementInTable__Name']");
-
-            if (!(ALL_SETTINGS['net-transfers'] == false)){
-
-
-                let playerID = get_player_id(name_div.innerText, TEAM_ID_DICT[teamCode]);
-                let net_transfers_element = create_net_transfers_element(playerID, tooltip="div");
-                net_transfers_element.style.fontSize = '12px';
-                net_transfers_element.style.float = '';
-                required_td.nextSibling.appendChild(net_transfers_element);
-            }
-        }
-
-    }
-
-    // disconnect obersver if setup already
-    if (bench_observer) bench_observer.disconnect();
-    // setup mutation observer to observe changes in sidebar DOM
-    setup_mutation_observer_for_sidebar_changes(SIDEBAR);
-}
-
-async function modifyDOM(modifySidebar=true){
+async function modifyDOM(){
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
     // the player jersey boxes in the website are inside button tags
     let all_buttons = pitchElement.querySelectorAll("button");
-
 
     // for points page:  30 button tags : 2 for each player
     // for transfers and my-team page:  45 button tags : 3 for each player
@@ -311,20 +280,6 @@ async function modifyDOM(modifySidebar=true){
                 playerElement.appendChild(past_fixtures_div);
             }
 
-            if (URL_CODE == 'transfers'){
-                // show net transfers data
-                let player_value_element = playerElement.querySelector("[class^='PitchElementData__ElementValue']");
-                try {
-                    player_value_element.removeChild(player_value_element.querySelector(".price-change-info"));}
-                catch (err) {
-                    // type error if query selector doesn't return a node
-                }
-                let netTransfersElement = create_net_transfers_and_profit_loss_element(player_id);
-                player_value_element.appendChild(netTransfersElement);
-
-            // the url code will now only be my-team so no need to check for that
-            }
-
             if (!(ALL_SETTINGS["expected-points"] == false)){
 
                 try {
@@ -341,16 +296,10 @@ async function modifyDOM(modifySidebar=true){
 
     }
 
-    // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
-    // for the player search sidebar
-
-    // also need to add mutation observer to observe changes
-    if (URL_CODE == 'transfers' && modifySidebar){
-        modify_DOM_for_sidebar();
-    }
+    // if the user is on the transfers page, then need to add away jersey if necessary
 
     // loop finished, setup mutation observer
-    if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
+    if (URL_CODE == 'my-team'){
         setup_mutation_observer_for_pitch_changes();
     }
 }
@@ -376,95 +325,6 @@ function create_expected_points_div(expected_points){
         main_div.appendChild(div);
     }
     return main_div;
-}
-function get_profit_loss(playerID){
-
-    if (!(USER_DATA.picks === undefined)){
-        for (let pick of USER_DATA.picks){
-            if (pick.element == playerID){
-                return (pick.selling_price - pick.purchase_price) / 10
-            }
-        }
-    }
-    return 0;
-}
-function create_profit_loss_element(playerID){
-
-    let profit_loss_element = document.createElement("div");
-    profit_loss_element.classList.add("profit-loss-info");
-    profit_loss_element.innerText = '(';
-    profit_loss_element.style = 'float:left';
-
-    let profit_loss = get_profit_loss(playerID);
-    let color = (profit_loss >= 0) ? "green" : "red";
-    let triangle = (profit_loss >= 0) ? "▲" : "▼";
-
-    let triangle_element = document.createElement("span");
-    triangle_element.style = `color: ${color}`
-    triangle_element.innerText = triangle;
-
-    let price_element = document.createElement("span");
-    price_element.innerText = profit_loss + ')';
-
-    profit_loss_element.appendChild(triangle_element);
-    profit_loss_element.appendChild(price_element);
-
-    return profit_loss_element;
-
-}
-function create_net_transfers_element(playerID, tooltip="span"){
-
-    let get_price_change_info_in_arrows = (net_transfers)=>{
-        if (Math.abs(net_transfers) <= 5e3) return "‹";
-        else if (Math.abs(net_transfers) <= 5e4) return "‹‹";
-        else if (Math.abs(net_transfers) <= 1e5) return "‹‹‹";
-        else return "‹‹‹‹";
-    }
-
-    let net_transfers_element = document.createElement("div");
-    net_transfers_element.classList.add("net-transfers-info");
-    
-    let player_data = PLAYER_ID_TO_DATA[playerID];
-    let transfers_in = player_data.transfers_in_event;
-    let transfers_out = player_data.transfers_out_event;
-
-    let color = ((transfers_in - transfers_out) >= 0) ? "green" : "red";
-    let degree = ((transfers_in - transfers_out) >= 0) ? 90 : -90;
-    net_transfers_element.style = `margin-left:2px;display: inline-block; rotate:${degree}deg; font-size:7px; margin-top:2px; float:left; letter-spacing:-1px; color:${color}`;
-
-    let price_change_info = get_price_change_info_in_arrows(transfers_in-transfers_out);
-    net_transfers_element.innerText = price_change_info
-
-    // add tooltip
-    color = ((transfers_in - transfers_out) >= 0) ? "rgb(1, 252, 122)" : "red";
-    let tooltip_element = document.createElement(tooltip);
-    tooltip_element.classList.add("net-transfers-info-tooltip");
-        tooltip_element.style = `letter-spacing: normal;background : ${color}; color: ${(color == 'red') ? "white" : "black"}; padding: 2px; border: 0.5px solid black; rotate:${-degree}deg`
-        if (tooltip == "div") {
-            tooltip_element.style.width='120px'
-            tooltip_element.style.marginLeft='-40px';
-        }
-        tooltip_element.innerText = `Net transfers: ${transfers_in - transfers_out}`;
-    net_transfers_element.appendChild(tooltip_element);
-
-    return net_transfers_element;
-
-}
-function create_net_transfers_and_profit_loss_element(playerID){
-    
-    let MAIN_DIV_ELEMENT = document.createElement("div");
-    MAIN_DIV_ELEMENT.classList.add("price-change-info");
-    MAIN_DIV_ELEMENT.style = 'display: inline-block; font-size:smaller;';
-
-    if (!(ALL_SETTINGS["profit-loss"] == false)){
-        var profit_loss_element = create_profit_loss_element(playerID);
-        MAIN_DIV_ELEMENT.appendChild(profit_loss_element);
-    }
-    if (!(ALL_SETTINGS["net-transfers"] == false)){
-        let net_transfers_element = create_net_transfers_element(playerID);
-        MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
-    }
-    return MAIN_DIV_ELEMENT;
 }
 
 function create_past_fixtures_div_element(playerID, teamID){
@@ -523,35 +383,24 @@ function get_player_event_data(gameweek, playerID){
     let all_players = LAST_FEW_EVENTS_DATA[gameweek]["elements"];
     return all_players.find((player)=>{return player.id == playerID});
 }
+
 function get_current_gameweek(){
 
-    let all_gameweeks = BOOTSTRAP_RESPONSE["events"];
-    for (let gameweek of all_gameweeks){
-        if (gameweek["is_current"] === true){
-            return Number(gameweek["id"]);
-        }
-    }
+    return Number(BOOTSTRAP_RESPONSE["events"]["current"]);
 
 }
 function find_chosen_gameweek(all_info_dict){
 
-    let all_gameweeks = all_info_dict["events"];
-    for (let gameweek of all_gameweeks){
-        if (gameweek["is_current"] === true){
-            CHOSEN_GAMEWEEK = Number(gameweek["id"]);
-            break;
-        }
-    }
+    CHOSEN_GAMEWEEK = all_info_dict["events"]["current"];
 
     // check url
     let url = trim_url(window.location.href);
-
-    if (url.endsWith("my-team")){
+    if (url.endsWith("my")){
         URL_CODE = "my-team";
         CHOSEN_GAMEWEEK += 1;
-    } else if (url.endsWith("transfers")){
+    } else if (url.endsWith("transactions")){
         CHOSEN_GAMEWEEK += 1;
-        URL_CODE = "transfers";
+        URL_CODE = "transactions";
     } else {
         URL_CODE = "event";
         let url_pieces = url.split('/');
@@ -560,50 +409,48 @@ function find_chosen_gameweek(all_info_dict){
 
 }
 
-async function fetch_team_name_away_fixture_dict_and_modify_DOM(){
+function create_team_name_away_fixture_dict_and_modify_DOM(fixtures){
 
-    let response = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
-    let fixtures = await response.json();
-    TEAM_AWAY_DICT = {};
-    for (let fixture of fixtures){
-        let home_team = ID_TEAM_DICT[fixture["team_h"]];
-        let away_team = ID_TEAM_DICT[fixture["team_a"]];
-        if (!(home_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[home_team] = false;
-        if (!(away_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[away_team] = true;
+    if (!(ALL_SETTINGS["away-home-jersey"] == false)){
+        TEAM_AWAY_DICT = {};
+        for (let fixture of fixtures){
+            let home_team = ID_TEAM_DICT[fixture["team_h"]];
+            let away_team = ID_TEAM_DICT[fixture["team_a"]];
+            if (!(home_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[home_team] = false;
+            if (!(away_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[away_team] = true;
     }
-    
+    }
      // Swap kits if needed after element discovered
      waitForElement(document.body, "[data-testid='pitch']").then(()=>{
         modifyDOM();
      })
 }
 
+async function fetch_team_name_away_fixture_dict_and_modify_DOM(){
+
+    if (!(ALL_SETTINGS["away-home-jersey"] == false)){
+        let response = await fetch(`https://draft.premierleague.com/api/event/${CHOSEN_GAMEWEEK}/live`);
+        response = await response.json();
+        create_team_name_away_fixture_dict_and_modify_DOM(response["fixtures"]);
+    } else {
+        create_team_name_away_fixture_dict_and_modify_DOM({});
+    }
+
+    }
+
 function check_if_url_is_a_valid_link(){
 
+    // not supporting transactions for now
     let url = trim_url(window.location.href);
-    let my_team_re = new RegExp("^https?://fantasy\.premierleague\.com/my-team/?$")
-    let transfer_re = new RegExp("^https?://fantasy\.premierleague\.com/transfers/?$")
-    let event_re = new RegExp("^https?://fantasy\.premierleague\.com/entry/[0-9]*/event/[0-9]{1,2}/?$");
+    let my_team_re = new RegExp("^https?://draft\.premierleague\.com/team/my/?$")
+    let event_re = new RegExp("^https?://draft\.premierleague\.com/entry/[0-9]*/event/[0-9]{1,2}/?$");
 
-    if (my_team_re.test(url) || transfer_re.test(url) || event_re.test(url)){
+    if (my_team_re.test(url) || event_re.test(url)){
         return true;
     }
     // all other links are invalid ( no need to inject content-scripts into them)
     return false;
 
-}
-function setup_mutation_observer_for_sidebar_changes(sidebar){
-
-    bench_observer = new MutationObserver(()=>{
-        // only interested if sidebar's DOM modified when in transfers page
-         if (trim_url(window.location.href) == CURRENT_URL){
-            modify_DOM_for_sidebar();
-        }
-    });
-
-    let config = {attributes:false, childList: true, subtree: true};
-    bench_observer.observe(sidebar, config)
-    
 }
 
 function setup_mutation_observer_for_url_change(){
@@ -611,28 +458,13 @@ function setup_mutation_observer_for_url_change(){
   const config = { attributes: false, childList: true, subtree: true }
 
   const observer = new MutationObserver(()=>{
+
     if (trim_url(window.location.href) != CURRENT_URL){
 
         // disconnect pitch oberser since main sets it again
         if (pitch_observer) pitch_observer.disconnect();
-        if (bench_observer) bench_observer.disconnect();
-
         CURRENT_URL = trim_url(window.location.href);
-
-        // fetch latest team of the user if user navigated to transfers page
-        if (CURRENT_URL.endsWith("transfers") && (!(ALL_SETTINGS["profit-loss"] == false))){
-            if (!(USER_ID === undefined)){
-                fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
-                    response=>response.json()).then((response)=>{
-                        USER_DATA = response;
-                        main();
-                    })
-            } else {
-                    main()
-            }
-        } else {
-            main();
-        }
+        main();
     }
   })
 
@@ -647,58 +479,31 @@ async function initContentScript(){
     ALL_SETTINGS = await chrome.storage.local.get(all_ids);
 
     try {
-    let [awayResponse, bootstrapResponse, FutureFixturesResponse, PastFixturesResponse] = await Promise.all([
+    let [awayResponse, bootstrapResponse] = await Promise.all([
         // link to get team name and away jersey link
         fetch("https://paudsu01.github.io/FPL-360/extension/FPL-HOME-AWAY.json"),
         // link to get info for current gameweek and team name and their appropriate ids
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        // Get all future fixtures 
-        fetch("https://fantasy.premierleague.com/api/fixtures/?future=1"),
-        // Get all past fixtures
-        fetch("https://fantasy.premierleague.com/api/fixtures/?future=0"),
+        fetch("https://draft.premierleague.com/api/bootstrap-static"),
             ])
     TEAM_JERSEY_LINK_DICT = await awayResponse.json();
     BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
-    ALL_FUTURE_FIXTURES = await FutureFixturesResponse.json();
-    ALL_PAST_FIXTURES = await PastFixturesResponse.json();
 
     if (!(ALL_SETTINGS["last-few-gw"] == false)){
-
-        // fetch the last few events data
-        let gameweek_value = get_current_gameweek()   ;
-        let end = Math.max(1, gameweek_value - 4);
-        while (gameweek_value >= end){
-            let response = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek_value}/live/`);
-            LAST_FEW_EVENTS_DATA[gameweek_value] = await response.json();
-            LAST_GAMEWEEK_WITH_DATA = gameweek_value;
-            gameweek_value --;
-        }
+        await fetch_events("previous", LAST_FEW_EVENTS_DATA, LAST_GAMEWEEK_WITH_DATA);
     }
 
-     // make a dict of team id to team code and 
-     // a dict that maps from team name to team code
-     create_team_name_id_code_dict(BOOTSTRAP_RESPONSE);
-     
-     // create dict from player web name to id
-     create_player_dict();
+    if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
+        await fetch_events("next", NEXT_FEW_EVENTS_DATA, FARTHEST_GAMEWEEK_WITH_DATA)
+    }
+    // make a dict of team id to team code and 
+    // a dict that maps from team name to team code
+    create_team_name_id_code_dict(BOOTSTRAP_RESPONSE);
+    
+    // create dict from player web name to id
+    create_player_dict();
 
-    waitForElement(document.body, "[class^='Navigation__StyledUL']").then(()=>{
-            try {
-                USER_ID = get_user_id(trim_url(document.querySelector("[class^='Navigation__StyledUL']").querySelector("[href^='/entry/']").getAttribute("href")));
-                if (!(ALL_SETTINGS["profit-loss"] == false)){
-                    fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
-                        response=>response.json()).then((response)=>{
-                            USER_DATA = response;
-                            main();
-                    })
-                } else {
-                    main();
-                }
-            } catch(err) {
-                main();
-                // this happens when creates their account at the beginning since they will have no previous events
-                // no need to fetch their data for profit/loss
-            }
+    waitForElement(document.body, "[class^='ismjs-main-nav']").then(()=>{
+        main();
         })
 
     } catch (err){
@@ -716,7 +521,7 @@ function setup_mutation_observer_for_pitch_changes(){
         pitch_observer.disconnect();
         // Swap kits if needed after element discovered
         waitForElement(document.body, "[data-testid='pitch']").then(()=>{
-            modifyDOM(false);
+            modifyDOM();
         })
     });
 
@@ -724,19 +529,17 @@ function setup_mutation_observer_for_pitch_changes(){
     // Options for the observer (which mutations to observe)
     let config = { childList: true, subtree: true, attributes: true};
     pitch_observer.observe(pitchElement, config)
+    
 }
 
 async function main(){
 
+    console.log('here')
     // return if not proper entry url
     is_a_proper_link = check_if_url_is_a_valid_link()
     if (!is_a_proper_link){
         return;
     }
-
-    
-     // if url is points then get gameweek from url
-     // if pick team then use api to get chosen gameweek
 
      // get chosen gameweek
      find_chosen_gameweek(BOOTSTRAP_RESPONSE);
@@ -744,12 +547,10 @@ async function main(){
      // make a dict that maps from teamName to away fixture value(true if the team has a next away fixture else false)
      // and call the modifyDOM function after done ( The modifyDOM function is inside this function since the function is async and 
      // we need the fixture dict ready before we swap kits)
-     if (URL_CODE != "my-team" && (!(ALL_SETTINGS["away-home-jersey"] == false))){
+     if (URL_CODE == "event"){
         fetch_team_name_away_fixture_dict_and_modify_DOM();
      } else {
-        // Swap kits if needed after element discovered
-        await waitForElement(document.body,"[data-testid='pitch']");
-        modifyDOM();
+        create_team_name_away_fixture_dict_and_modify_DOM(NEXT_FEW_EVENTS_DATA[CHOSEN_GAMEWEEK]["fixtures"]);
     }
 
 }
