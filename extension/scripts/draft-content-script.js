@@ -1,6 +1,4 @@
 // Variable declaration
-// Team code to next 5 fixtures
-var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 // observer for pitch changes
 var pitch_observer;
 
@@ -9,7 +7,7 @@ var pitch_observer;
 async function fetch_events(type, object, data_to_store){
     // fetch the last few events data
     let gameweek_value = (type == "next") ? get_current_gameweek()+1: get_current_gameweek();
-    let end = (type == "next") ? Math.max(1, gameweek_value + 3) : Math.max(1, gameweek_value - 4);
+    let end = (type == "next") ? Math.max(1, gameweek_value + 4) : Math.max(1, gameweek_value - 4);
 
     if (end > gameweek_value){
         [gameweek_value, end] = [end, gameweek_value];
@@ -57,32 +55,7 @@ function get_increment_second_goalie_indexes(){
     }
 }
 
-async function check_if_away_jersey_needed(playerButtonElement, teamCode){
-
-    let awayJerseyNeeded = false;
-
-    if (URL_CODE == 'event' || URL_CODE == 'transactions'){
-        if (teamCode in TEAM_AWAY_DICT && TEAM_AWAY_DICT[teamCode] === true){
-            // Modify attributes to handle re-sizing of the window for these images
-            awayJerseyNeeded = true;
-        }
-    } else {
-
-        // element might take time to load
-        await waitForElement(playerButtonElement, "span")
-        // only pick first team if double gameweek
-        let oppositionTeam = playerButtonElement.querySelector("span").innerText.split(',')[0];
-        let pattern = new RegExp(/\([HA]\)/);
-        let matches = oppositionTeam.match(pattern);
-        if (matches && matches[0] == '(A)'){
-            awayJerseyNeeded = true;
-        }
-    }
-
-    return awayJerseyNeeded
-
-}
-function create_next_five_fixtures_object(teamID, start){
+function create_next_few_fixtures_object(teamID, start){
 
    let end = Math.min(start+4, 38)
 
@@ -90,23 +63,25 @@ function create_next_five_fixtures_object(teamID, start){
 
    let fixtures_object = {};
 
-   while (start <= end){
-    fixtures_object[start] = []
-    start ++;
+   let start_counter = start;
+   while (start_counter <= end){
+    fixtures_object[start_counter] = []
+    start_counter ++;
    }
 
    // go through all remaining fixtures and break if we find event "end + 1"
-   for (let fixture of ALL_FUTURE_FIXTURES){
+   for (let counter = start; counter <= end; counter++){
 
-        if (fixture["team_h"] == teamID || fixture["team_a"] == teamID){
+        let fixtures = NEXT_FEW_EVENTS_DATA[counter]["fixtures"];
+        for (let fixture of fixtures){
 
-            if (Number(fixture.event) > end) break;
+            if (fixture["team_h"] == teamID || fixture["team_a"] == teamID){
 
-            let home_away = (fixture["team_h"] == teamID) ? "H" : "A"
-            let team = (fixture["team_h"] == teamID) ? ID_TEAM_DICT[fixture["team_a"]] : ID_TEAM_DICT[fixture["team_h"]];
-            let fdr = (fixture["team_h"] == teamID) ? fixture["team_h_difficulty"] : fixture["team_a_difficulty"];
-            fixtures_object[fixture["event"]].push([team, home_away, fdr])
+                let home_away = (fixture["team_h"] == teamID) ? "H" : "A"
+                let team = (fixture["team_h"] == teamID) ? ID_TEAM_DICT[fixture["team_a"]] : ID_TEAM_DICT[fixture["team_h"]];
+                fixtures_object[counter].push([team, home_away])
 
+            }
         }
     }
     // save for next use 
@@ -115,97 +90,51 @@ function create_next_five_fixtures_object(teamID, start){
     return fixtures_object;
 }
 
-function create_next_five_fixtures_div_element(teamID, colorOnly = false){
+function create_next_few_fixtures_div_element(teamID){
 
     // function to set background color and text for each fixture div
     let set_background_and_text_for_fixtures = (fixture_list, element)=>{
                         element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
-                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_list[2]][1]}; padding: 2px; border: 0.5px solid black`
+                        element.style = "background : white; color: black; padding: 2px; border: 0.5px solid black; font-weight: bolder";
                     }
-
-    let set_background_and_append_div = (parent_div, color, fixture_info)=>{
-        let third_div = document.createElement("div");
-        third_div.style = `width: 15px; height: 15px; border-radius: 50%; background: ${color};margin: 2px auto;`
-        third_div.classList.add("fixture-color-div");
-
-        // add tooltip to div
-        let span = document.createElement("span");
-        span.classList.add("fixture-info");
-        if (fixture_info){
-            span.style = `background : ${FDR_TO_COLOR_CODE[fixture_info[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_info[2]][1]}; padding: 2px; border: 0.5px solid black`
-            span.innerText = `${fixture_info[0]} (${fixture_info[1]})`
-        } else {
-            span.innerText = (fixture_info == null) ? "Blank" : `${fixture_info[0]} (${fixture_info[1]})`
-            span.style = "background : black; color: white; padding: 2px; border: 0.5px solid black";
-
-        }
-        third_div.appendChild(span);
-        parent_div.appendChild(third_div);
-    }
+   let start = CHOSEN_GAMEWEEK;
+   let end = Math.min(CHOSEN_GAMEWEEK+3, 38)
    // the fixtures object will be of the type:
-   // {24 : [["TEAM", "H", FDR]],
-   // 25 : [["TEAM", "A", FDR], ["TEAM", "H", FDR]], (double gameweek)
+   // {24 : [["TEAM", "H"]],
+   // 25 : [["TEAM", "A"], ["TEAM", "H"]], (double gameweek)
    // 26 : [], (blank gameweek)
    // ....
     //}
-   let start= CHOSEN_GAMEWEEK;
-   let increment = (colorOnly) ? 4 : 3
-   let end = Math.min(CHOSEN_GAMEWEEK+increment, 38)
-
-   var fixtures_object = create_next_five_fixtures_object(teamID, start);
+   var fixtures_object = create_next_few_fixtures_object(teamID, start);
     
    var MAIN_DIV_ELEMENT = document.createElement("div");
    MAIN_DIV_ELEMENT.setAttribute("class", "upcoming-fixtures")
    // Hide if any secondary divs overflow
-   if (!colorOnly) {
-        MAIN_DIV_ELEMENT.setAttribute("style",
-            `display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px`)
-   } else {
-        MAIN_DIV_ELEMENT.setAttribute("style",
-            `display: flex; box-sizing: border-box;`)
-   }
-    
+    MAIN_DIV_ELEMENT.setAttribute("style",
+        `display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px`)
 
    while (start <= end){
 
-    let secondary_div = document.createElement("div");
+        let secondary_div = document.createElement("div");
 
-    if (colorOnly){
-        secondary_div.setAttribute("style",
-            "display: inline-block; flex: 1");
-    } else {
         secondary_div.setAttribute("style",
             "display: grid; overflow: hidden; grid-template-columns: repeat(1, 1fr)");
-    }
 
-    if (fixtures_object[start].length == 0) {
+        if (fixtures_object[start].length == 0) {
 
-        if (!colorOnly){
             secondary_div.innerText = '-';
             // set background to the grey for blank fixture
             secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
         } else {
-            // if color only: then create a new div element and insert with color black
-            set_background_and_append_div(secondary_div, "black", null);
-        }
 
-    } else {
             for (let each_fixture of fixtures_object[start]){
 
                 if (fixtures_object[start].length == 1){
-                    if (colorOnly){
-                        set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0], each_fixture);
-                    } else {
-                        set_background_and_text_for_fixtures(each_fixture, secondary_div);
-                    }
+                    set_background_and_text_for_fixtures(each_fixture, secondary_div);
                 } else {
-                    if (colorOnly){
-                            set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0], each_fixture);
-                    } else {
-                        let div_element = document.createElement("div");
-                        set_background_and_text_for_fixtures(each_fixture, div_element);
-                        secondary_div.append(div_element);
-                    }
+                    let div_element = document.createElement("div");
+                    set_background_and_text_for_fixtures(each_fixture, div_element);
+                    secondary_div.append(div_element);
                 }
             }
     }
@@ -243,18 +172,21 @@ async function modifyDOM(){
                 if (currentIndex != secondGoalieValue && currentIndex != startValue) {
 
                     let sourceElement= playerElement.querySelector("source");
-
-                    let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
+                    if (URL_CODE == 'my-team'){
+                        var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, true, TEAM_AWAY_DICT,"[class^='styles__ElementValue']")
+                    } else {
+                        var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, false, TEAM_AWAY_DICT,"[class^='styles__ElementValue']")
+                    }
 
                     modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode);
                 }
             }
 
         } catch (err){
-            // error when no a player removed and jo jersey there to know which the player is
+            // error when no a player removed and no jersey there to know which the player is
         }
 
-        if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
+        if (URL_CODE == 'my-team'){
 
             if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
                 // inject their next 5 fixtures after modifying img attribute if "my-team" page
@@ -263,11 +195,11 @@ async function modifyDOM(){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
+                var fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[teamCode]);
                 playerElement.appendChild(fixtures_div);
             }
         
-            var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
+            var player_web_name = playerElement.querySelector("[class^='styles__ElementName']").innerText;
             let player_id = get_player_id(player_web_name, TEAM_ID_DICT[teamCode]);
             if (!(ALL_SETTINGS["last-few-gw"] == false)){
                 // inject their past 5 fixtures data after (Last few gameweeks points)

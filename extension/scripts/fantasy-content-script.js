@@ -25,33 +25,7 @@ function get_increment_second_goalie_indexes(){
     }
 }
 
-async function check_if_away_jersey_needed(playerButtonElement, teamCode){
-
-        let awayJerseyNeeded = false;
-
-        if (URL_CODE == 'event' || URL_CODE == 'transfers'){
-            if (teamCode in TEAM_AWAY_DICT && TEAM_AWAY_DICT[teamCode] === true){
-                // Modify attributes to handle re-sizing of the window for these images
-                awayJerseyNeeded = true;
-            }
-        } else {
-
-            // element might take time to load
-            await waitForElement(playerButtonElement, "span")
-
-            // only pick first team if double gameweek
-            let oppositionTeam = playerButtonElement.querySelector("span").innerText.split(',')[0];
-            let pattern = new RegExp(/\([HA]\)/);
-            let matches = oppositionTeam.match(pattern);
-            if (matches && matches[0] == '(A)'){
-                awayJerseyNeeded = true;
-            }
-        }
-
-        return awayJerseyNeeded
-
-}
-function create_next_five_fixtures_object(teamID, start){
+function create_next_few_fixtures_object(teamID, start){
 
    let end = Math.min(start+4, 38)
 
@@ -84,7 +58,7 @@ function create_next_five_fixtures_object(teamID, start){
     return fixtures_object;
 }
 
-function create_next_five_fixtures_div_element(teamID, colorOnly = false){
+function create_next_few_fixtures_div_element(teamID, colorOnly = false){
 
     // function to set background color and text for each fixture div
     let set_background_and_text_for_fixtures = (fixture_list, element)=>{
@@ -121,7 +95,7 @@ function create_next_five_fixtures_div_element(teamID, colorOnly = false){
    let increment = (colorOnly) ? 4 : 3
    let end = Math.min(CHOSEN_GAMEWEEK+increment, 38)
 
-   var fixtures_object = create_next_five_fixtures_object(teamID, start);
+   var fixtures_object = create_next_few_fixtures_object(teamID, start);
     
    var MAIN_DIV_ELEMENT = document.createElement("div");
    MAIN_DIV_ELEMENT.setAttribute("class", "upcoming-fixtures")
@@ -214,7 +188,7 @@ function modify_DOM_for_sidebar(){
                 let fixtures_div = required_td.querySelector(".upcoming-fixtures");
                 if (fixtures_div) fixtures_div.remove();
 
-                fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
+                fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
                 // inject the next five fixtures
                 required_td.appendChild(fixtures_div);
 
@@ -275,7 +249,11 @@ async function modifyDOM(modifySidebar=true){
 
                     let sourceElement= playerElement.querySelector("source");
 
-                    let away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode)
+                    if (URL_CODE == 'my-team'){
+                        var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, true, TEAM_AWAY_DICT, "span")
+                    } else {
+                        var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, false, TEAM_AWAY_DICT, "span")
+                    }
 
                     modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode);
                 }
@@ -294,7 +272,7 @@ async function modifyDOM(modifySidebar=true){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                var fixtures_div = create_next_five_fixtures_div_element(TEAM_ID_DICT[teamCode]);
+                var fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[teamCode]);
                 playerElement.appendChild(fixtures_div);
             }
         

@@ -1,8 +1,9 @@
-
 // Utility functions and variables for content-script js files
 
 // variables
 
+// Team code to next 5 fixtures
+var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 // Team code to true if away fixture in current gameweek else false
 var TEAM_AWAY_DICT={};
 // chosen gameweek 
@@ -156,4 +157,30 @@ function waitForElement(parentElement, selector){
     }
 
     )
+}
+
+async function check_if_away_jersey_needed(playerButtonElement, teamCode, use_regex, dict, querySelectorParameter){
+
+    let awayJerseyNeeded = false;
+
+    if (!use_regex){
+        if (teamCode in dict && dict[teamCode] === true){
+            // Modify attributes to handle re-sizing of the window for these images
+            awayJerseyNeeded = true;
+        }
+    } else {
+
+        // element might take time to load
+        await waitForElement(playerButtonElement, querySelectorParameter)
+        // only pick first team if double gameweek
+        let oppositionTeam = playerButtonElement.querySelector(querySelectorParameter).innerText.split(',')[0];
+        let pattern = new RegExp(/\([HA]\)/);
+        let matches = oppositionTeam.match(pattern);
+        if (matches && matches[0] == '(A)'){
+            awayJerseyNeeded = true;
+        }
+    }
+
+    return awayJerseyNeeded
+
 }
