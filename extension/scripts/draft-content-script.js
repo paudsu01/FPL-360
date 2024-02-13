@@ -4,7 +4,7 @@ var pitch_observer;
 
 // Functions
 
-async function fetch_events(type, object, data_to_store){
+async function fetch_events(type, object){
     // fetch the last few events data
     let gameweek_value = (type == "next") ? get_current_gameweek()+1: get_current_gameweek();
     let end = (type == "next") ? Math.max(1, gameweek_value + 4) : Math.max(1, gameweek_value - 4);
@@ -16,7 +16,11 @@ async function fetch_events(type, object, data_to_store){
     while (gameweek_value >= end){
         let response = await fetch(`https://draft.premierleague.com/api/event/${gameweek_value}/live`);
         object[gameweek_value] = await response.json();
-        data_to_store = gameweek_value;
+        if (type == "next"){
+            FARTHEST_GAMEWEEK_WITH_DATA = FARTHEST_GAMEWEEK_WITH_DATA || gameweek_value
+        } else {
+            LAST_GAMEWEEK_WITH_DATA = gameweek_value;
+        }
         gameweek_value --;
     }
 }
@@ -95,7 +99,7 @@ function create_next_few_fixtures_div_element(teamID){
     // function to set background color and text for each fixture div
     let set_background_and_text_for_fixtures = (fixture_list, element)=>{
                         element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
-                        element.style = "background : white; color: black; padding: 2px; border: 0.5px solid black; font-weight: bolder";
+                        element.style = "background :#92cbcb; color: black; padding: 2px; border: 0.5px solid black; font-weight: bolder; align-items: center;display: flex;";
                     }
    let start = CHOSEN_GAMEWEEK;
    let end = Math.min(CHOSEN_GAMEWEEK+3, 38)
@@ -111,7 +115,7 @@ function create_next_few_fixtures_div_element(teamID){
    MAIN_DIV_ELEMENT.setAttribute("class", "upcoming-fixtures")
    // Hide if any secondary divs overflow
     MAIN_DIV_ELEMENT.setAttribute("style",
-        `display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px`)
+        "display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px")
 
    while (start <= end){
 
@@ -122,9 +126,9 @@ function create_next_few_fixtures_div_element(teamID){
 
         if (fixtures_object[start].length == 0) {
 
-            secondary_div.innerText = '-';
+            secondary_div.innerText = '';
             // set background to the grey for blank fixture
-            secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
+            secondary_div.style = `background: rgb(33,26,35); border: 0.5px solid black`;
         } else {
 
             for (let each_fixture of fixtures_object[start]){
@@ -212,18 +216,6 @@ async function modifyDOM(){
                 playerElement.appendChild(past_fixtures_div);
             }
 
-            if (!(ALL_SETTINGS["expected-points"] == false)){
-
-                try {
-                    playerElement.removeChild(playerElement.querySelector(".expected-points-div"));}
-                catch (err) {
-                    // type error if query selector doesn't return a node
-                }
-                // get expected points
-                let expected_points = PLAYER_ID_TO_DATA[player_id]["ep_next"];
-                let expected_points_div = create_expected_points_div(expected_points);
-                playerElement.appendChild(expected_points_div);
-            }
         }
 
     }
@@ -289,7 +281,15 @@ function create_past_fixtures_div_element(playerID, teamID){
         info.classList.add("point-info");
         info.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
         // get fixture info : opposition team and home/away info
-        let fixture = get_fixture(player_event_data["explain"][0].fixture, teamID)
+        if (player_event_data.explain.length == 1){
+            var fixture = get_fixture(player_event_data["explain"][0][1], teamID, start)
+        } else {
+            var fixture = '';
+            for (let each_game of player_event_data.explain){
+                fixture = fixture + ', ' + get_fixture(each_game[1], teamID, start)
+            }
+            if (fixture != '') fixture = fixture.slice(0, fixture.length -2)
+        }
         // show Gameweek, team, xG, xA
         info.innerText = `GW ${start} ${fixture} xG ${stats.expected_goals} xA ${stats.expected_assists}`
         secondary_div.appendChild(info);
@@ -301,9 +301,9 @@ function create_past_fixtures_div_element(playerID, teamID){
     return MAIN_DIV_ELEMENT;
 }
 
-function get_fixture(fixtureID, teamID){
+function get_fixture(fixtureID, teamID, gameweek){
 
-    for (let each_fixture of ALL_PAST_FIXTURES){
+    for (let each_fixture of LAST_FEW_EVENTS_DATA[gameweek]["fixtures"]){
         if (each_fixture.id == fixtureID){
             return (each_fixture.team_h == teamID) ? `${ID_TEAM_DICT[each_fixture.team_a]}(A)` : `${ID_TEAM_DICT[each_fixture.team_h]}(H)`
         }
@@ -311,9 +311,7 @@ function get_fixture(fixtureID, teamID){
     return "Blank"
 }
 function get_player_event_data(gameweek, playerID){
-
-    let all_players = LAST_FEW_EVENTS_DATA[gameweek]["elements"];
-    return all_players.find((player)=>{return player.id == playerID});
+    return LAST_FEW_EVENTS_DATA[gameweek]["elements"][`${playerID}`];
 }
 
 function get_current_gameweek(){
@@ -466,7 +464,6 @@ function setup_mutation_observer_for_pitch_changes(){
 
 async function main(){
 
-    console.log('here')
     // return if not proper entry url
     is_a_proper_link = check_if_url_is_a_valid_link()
     if (!is_a_proper_link){

@@ -1,6 +1,4 @@
 // Variable declaration
-// Team code to next 5 fixtures
-var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 var ALL_FUTURE_FIXTURES;
 // API response from "https://fantasy.premierleague.com/api/fixtures?future=0
 var ALL_PAST_FIXTURES;
@@ -63,7 +61,7 @@ function create_next_few_fixtures_div_element(teamID, colorOnly = false){
     // function to set background color and text for each fixture div
     let set_background_and_text_for_fixtures = (fixture_list, element)=>{
                         element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
-                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_list[2]][1]}; padding: 2px; border: 0.5px solid black`
+                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_list[2]][1]}; padding: 2px; border: 0.5px solid black; align-items:center;display:flex`
                     }
 
     let set_background_and_append_div = (parent_div, color, fixture_info)=>{
@@ -124,7 +122,6 @@ function create_next_few_fixtures_div_element(teamID, colorOnly = false){
     if (fixtures_object[start].length == 0) {
 
         if (!colorOnly){
-            secondary_div.innerText = '-';
             // set background to the grey for blank fixture
             secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
         } else {
@@ -475,7 +472,15 @@ function create_past_fixtures_div_element(playerID, teamID){
         info.classList.add("point-info");
         info.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
         // get fixture info : opposition team and home/away info
-        let fixture = get_fixture(player_event_data["explain"][0].fixture, teamID)
+        if (player_event_data.explain.length == 1){
+            var fixture = get_fixture(player_event_data["explain"][0].fixture, teamID)
+        } else {
+            var fixture = '';
+            for (let each_game of player_event_data.explain){
+                fixture = fixture + ', ' + get_fixture(each_game.fixture, teamID)
+            }
+            if (fixture != '') fixture = fixture.slice(0, fixture.length -2)
+        }
         // show Gameweek, team, xG, xA
         info.innerText = `GW ${start} ${fixture} xG ${stats.expected_goals} xA ${stats.expected_assists}`
         secondary_div.appendChild(info);

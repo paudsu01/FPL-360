@@ -53,6 +53,12 @@ function trim_url(link){
 
 }
 
+function get_player_event_data(gameweek, playerID){
+
+    let all_players = LAST_FEW_EVENTS_DATA[gameweek]["elements"];
+    return all_players.find((player)=>{return player.id == playerID});
+}
+
 // returns player's id based on their webName and teamName
 function get_player_id(webName, teamID){
 
