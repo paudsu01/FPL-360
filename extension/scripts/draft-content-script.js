@@ -1,6 +1,7 @@
 // Variable declaration
 // observer for pitch changes
 var pitch_observer;
+var sidebar_observer;
 
 // Functions
 
@@ -99,7 +100,7 @@ function create_next_few_fixtures_div_element(teamID){
     // function to set background color and text for each fixture div
     let set_background_and_text_for_fixtures = (fixture_list, element)=>{
                         element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
-                        element.style = "background :#92cbcb; color: black; padding: 2px; border: 0.5px solid black; font-weight: bolder; align-items: center;display: flex;";
+                        element.style = "background :linear-gradient(to right, rgb(2, 239, 255), rgb(0, 255, 135)); color: black; padding: 2px; border: 0.5px solid black; font-weight: bolder; align-items: center;display: flex";
                     }
    let start = CHOSEN_GAMEWEEK;
    let end = Math.min(CHOSEN_GAMEWEEK+3, 38)
@@ -149,8 +150,28 @@ function create_next_few_fixtures_div_element(teamID){
    return MAIN_DIV_ELEMENT;
 }
 
-async function modifyDOM(){
+function modifyDOMtransactions(){
 
+    if (URL_CODE.includes("transactions") && URL_CODE != "transactions-trade"){
+        let sidebar = document.querySelector("[class^='Layout__Secondary']");
+        modify_DOM_for_sidebar(sidebar);
+        setup_mutation_observer_for_sidebar_change(sidebar);
+    }
+}
+
+function setup_mutation_observer_for_sidebar_change(sidebar){
+
+    if (sidebar_observer) sidebar_observer.disconnect();
+
+    sidebar_observer = new MutationObserver(()=>{
+        modifyDOMtransactions();
+    });
+    
+    let config = { attributes: false, childList: true, subtree: true }
+    sidebar_observer.observe(sidebar, config = config);
+}
+
+async function modifyDOM(){
     let pitchElement = document.querySelector("[data-testid='pitch']");
     // the player jersey boxes in the website are inside button tags
     let all_buttons = pitchElement.querySelectorAll("button");
@@ -223,6 +244,7 @@ async function modifyDOM(){
     // loop finished, setup mutation observer
     if (URL_CODE == 'my-team'){
         setup_mutation_observer_for_pitch_changes();
+
     }
 }
 
@@ -249,7 +271,7 @@ function create_expected_points_div(expected_points){
     return main_div;
 }
 
-function create_past_fixtures_div_element(playerID, teamID){
+function create_past_fixtures_div_element(playerID, teamID, colorOnly=false){
 
     let MAIN_DIV_ELEMENT = document.createElement("div");
     MAIN_DIV_ELEMENT.classList.add("past-fixtures");
@@ -272,12 +294,15 @@ function create_past_fixtures_div_element(playerID, teamID){
         secondary_div.classList.add("point-div");
         let [background, color] = get_color_for_points(points);
         secondary_div.style = `width: 17px; height: 17px; color: ${color}; background: ${background} ;margin: 2px auto; font-size: 12px; border: 0.1px solid black`
-        secondary_div.innerText = points;
+        if (colorOnly){
+            secondary_div.style.borderRadius = '50%';
+        } else {
+            secondary_div.innerText = points;
+        }
 
         // span element for tooltip when hovering over the point
         let info = document.createElement("div");
         info.classList.add("point-info");
-        info.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
         // get fixture info : opposition team and home/away info
         if (player_event_data.explain.length == 1){
             var fixture = get_fixture(player_event_data["explain"][0][1], teamID, start)
@@ -289,7 +314,14 @@ function create_past_fixtures_div_element(playerID, teamID){
             if (fixture != '') fixture = fixture.slice(0, fixture.length -2)
         }
         // show Gameweek, team, xG, xA
-        info.innerText = `GW ${start} ${fixture} xG ${stats.expected_goals} xA ${stats.expected_assists}`
+        if (!colorOnly){
+            info.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
+            info.innerText = `GW ${start} ${fixture} xG ${stats.expected_goals} xA ${stats.expected_assists}`
+        } else {
+            info.style = `background : white; color: black; padding: 2px; border: 0.5px solid black; width: auto`
+            create_table_for_info(info, points, start, fixture, stats);
+        }
+
         secondary_div.appendChild(info);
  
         MAIN_DIV_ELEMENT.appendChild(secondary_div);
@@ -323,18 +355,33 @@ function find_chosen_gameweek(all_info_dict){
 
     // check url
     let url = trim_url(window.location.href);
+    console.log(url);
     if (url.endsWith("my")){
         URL_CODE = "my-team";
         CHOSEN_GAMEWEEK += 1;
-    } else if (url.endsWith("transactions")){
+    } else if (url.includes("transactions")){
         CHOSEN_GAMEWEEK += 1;
-        URL_CODE = "transactions";
+        URL_CODE = get_url_code_for_transactions(url);
     } else {
         URL_CODE = "event";
         let url_pieces = url.split('/');
         CHOSEN_GAMEWEEK = url_pieces[url_pieces.length-1];
     }
+}
 
+function get_url_code_for_transactions(url){
+
+    // transactions page for remove with a / at the end takes to normal transactions page
+    let transaction_remove_re = new RegExp("^https?://draft\.premierleague\.com/team/transactions/remove$")
+    let transaction_trade_re = new RegExp("^https?://draft\.premierleague\.com/team/transactions/trade$")
+
+    if (transaction_trade_re.test(url)){
+        return "transactions-trade"
+    } else if (transaction_remove_re.test(url)){
+        return "transactions-remove"
+    } else {
+        return "transactions"
+    }
 }
 
 function create_team_name_away_fixture_dict_and_modify_DOM(fixtures){
@@ -348,9 +395,15 @@ function create_team_name_away_fixture_dict_and_modify_DOM(fixtures){
             if (!(away_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[away_team] = true;
     }
     }
-     // Swap kits if needed after element discovered
-     waitForElement(document.body, "[data-testid='pitch']").then(()=>{
-        modifyDOM();
+        // Swap kits if needed after element discovered
+        let transactions_func = URL_CODE.includes("transactions")
+        console.log(transactions_func);
+        waitForElement(document.body, (transactions_func) ? "[class^='Layout__Secondary']" : "[data-testid='pitch']").then(()=>{
+            if (transactions_func){
+                modifyDOMtransactions();
+            } else {
+                modifyDOM();
+            }
      })
 }
 
@@ -372,8 +425,9 @@ function check_if_url_is_a_valid_link(){
     let url = trim_url(window.location.href);
     let my_team_re = new RegExp("^https?://draft\.premierleague\.com/team/my/?$")
     let event_re = new RegExp("^https?://draft\.premierleague\.com/entry/[0-9]*/event/[0-9]{1,2}/?$");
+    let transactions_re = new RegExp("^https?://draft\.premierleague\.com/team/transactions/?.*$");
 
-    if (my_team_re.test(url) || event_re.test(url)){
+    if (my_team_re.test(url) || event_re.test(url) || transactions_re.test(url)){
         return true;
     }
     // all other links are invalid ( no need to inject content-scripts into them)
@@ -448,9 +502,14 @@ function setup_mutation_observer_for_pitch_changes(){
         if (trim_url(window.location.href) != CURRENT_URL) return;
         pitch_observer.disconnect();
         // Swap kits if needed after element discovered
-        waitForElement(document.body, "[data-testid='pitch']").then(()=>{
-            modifyDOM();
-        })
+        let transactions_func = URL_CODE.includes("transactions")
+        waitForElement(document.body, (transactions_func) ? "[class^='Layout__Secondary']" : "[data-testid='pitch']").then(()=>{
+            if (transactions_func){
+                modifyDOMtransactions();
+            } else {
+                modifyDOM();
+            }
+     })
     });
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
@@ -458,6 +517,22 @@ function setup_mutation_observer_for_pitch_changes(){
     var config = { characterData: true, attributes: false, childList: false, subtree: true };
     pitch_observer.observe(pitchElement, config)
     
+}
+function create_table_for_info(parent, points, gameweek, fixture, stats){
+
+    let points_span = document.createElement("span");
+    points_span.innerText = `GW ${gameweek} : ${fixture}`
+    parent.appendChild(points_span);
+    let [background, color] = get_color_for_points(points);
+
+    let table = document.createElement("table");
+    table.classList.add("points-info-table");
+    table.innerHTML = `<thead>
+    <tr><th>Points</th><th>G</th><th>A</th><th>xG</th><th>xA</th></tr></thead><tbody>
+    <tr><td style="background: ${background}; color:${color}">${points}</td><td>${stats.goals_scored}</td><td>${stats.assists}</td><td>${stats.expected_goals}</td><td>${stats.expected_assists}</td></tr>
+    </tbody>
+    `
+    parent.appendChild(table);
 }
 
 async function main(){
@@ -468,6 +543,7 @@ async function main(){
         return;
     }
 
+    console.log('got here success');
      // get chosen gameweek
      find_chosen_gameweek(BOOTSTRAP_RESPONSE);
 
@@ -481,7 +557,47 @@ async function main(){
     }
 
 }
+function modify_DOM_for_sidebar(sidebar){
 
+    // The player's are divided into their position and 
+    // each position has a table of it's own where player info is present inside each tr tag
+    let all_tables = sidebar.querySelectorAll("table");
+    for (let table of all_tables){
+        // the td element for all players is inside the tbody of each table with the class that starts with Table_PrimaryCell
+        let all_td_elements = table.querySelector("tbody").querySelectorAll("[class^='Table__PrimaryCell']");
+
+        for (let required_td of all_td_elements){
+            
+            let teamCode = required_td.querySelector("span").innerText;
+
+            // avoid goalies for jersey swap
+            if ((!(ALL_SETTINGS["away-home-jersey"] == false)) && required_td.querySelectorAll("span")[1].innerText !== "GKP"){
+
+                // Change img attribute to swap for away jersey as necessary
+                modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
+
+            }
+
+            try {
+
+            if (!(ALL_SETTINGS["last-few-gw"] == false)){
+
+                let fixtures_div = required_td.querySelector(".past-fixtures");
+                if (fixtures_div) fixtures_div.remove();
+
+                let player_name = required_td.querySelector("[class^='Media__Body']").innerText.split('\n')[0]
+                let team_id = TEAM_ID_DICT[teamCode]
+                fixtures_div = create_past_fixtures_div_element(get_player_id(player_name, team_id), team_id, true);
+                // inject the past few fixtures
+                required_td.appendChild(fixtures_div);
+
+            }
+            }catch(err){
+                console.log(err);
+            }
+        }
+    }
+}
 // add mutation listener to run the main function again if the route changes
 // This is necessary because content-script won't get loaded again as websites like this
 // use Javascript frameworks and Ajax calls to only update parts of the existing webpage content as the user navigates around the site
