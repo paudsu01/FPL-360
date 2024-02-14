@@ -52,3 +52,7 @@
     position: relative !important;
     z-index: 1;
   }
+
+  .fpl360-background-color{
+    background: linear-gradient(to right, rgb(2, 239, 255), rgb(0, 255, 135));
+  }

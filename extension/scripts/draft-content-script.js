@@ -2,7 +2,13 @@
 // observer for pitch changes
 var pitch_observer;
 var sidebar_observer;
-
+const SELECTOR_OBJECT = {
+    'transactions' : "[class^='Layout__Secondary']",
+    'transactions-trade' : "fieldset",
+    'event': "[data-testid='pitch']",
+    'my-team': "[data-testid='pitch']",
+    }
+ 
 // Functions
 
 async function fetch_events(type, object){
@@ -152,11 +158,24 @@ function create_next_few_fixtures_div_element(teamID){
 
 function modifyDOMtransactions(){
 
-    if (URL_CODE.includes("transactions") && URL_CODE != "transactions-trade"){
+    if (URL_CODE == "transactions-trade"){
+
+        for (let fielsetElement of document.querySelectorAll("fieldset")){
+
+            let td_element_selector = "[class^='styles__NameCell']"
+            let player_name_selector = "[class^='styles__TradeElementText']"
+            modify_DOM_for_sidebar(fielsetElement, td_element_selector, player_name_selector, true)
+        }
+
+    } else if (URL_CODE.includes("transactions") && URL_CODE != "transactions-trade"){
+
         let sidebar = document.querySelector("[class^='Layout__Secondary']");
-        modify_DOM_for_sidebar(sidebar);
+        let td_element_selector = "[class^='Table__PrimaryCell']";
+        let player_name_selector = "[class^='Media__Body']";
+        modify_DOM_for_sidebar(sidebar, td_element_selector, player_name_selector);
+
         setup_mutation_observer_for_sidebar_change(sidebar);
-    }
+    } 
 }
 
 function setup_mutation_observer_for_sidebar_change(sidebar){
@@ -355,7 +374,6 @@ function find_chosen_gameweek(all_info_dict){
 
     // check url
     let url = trim_url(window.location.href);
-    console.log(url);
     if (url.endsWith("my")){
         URL_CODE = "my-team";
         CHOSEN_GAMEWEEK += 1;
@@ -395,10 +413,10 @@ function create_team_name_away_fixture_dict_and_modify_DOM(fixtures){
             if (!(away_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[away_team] = true;
     }
     }
-        // Swap kits if needed after element discovered
-        let transactions_func = URL_CODE.includes("transactions")
-        console.log(transactions_func);
-        waitForElement(document.body, (transactions_func) ? "[class^='Layout__Secondary']" : "[data-testid='pitch']").then(()=>{
+        let selector = SELECTOR_OBJECT[URL_CODE];
+       // Swap kits if needed after element discovered
+        waitForElement(document.body, selector).then(()=>{
+            let transactions_func = URL_CODE.includes("transactions")
             if (transactions_func){
                 modifyDOMtransactions();
             } else {
@@ -443,8 +461,10 @@ function setup_mutation_observer_for_url_change(){
 
     if (trim_url(window.location.href) != CURRENT_URL){
 
-        // disconnect pitch oberser since main sets it again
+        // disconnect pitch observer and sidebar observer since main sets it again
         if (pitch_observer) pitch_observer.disconnect();
+        if (sidebar_observer) sidebar_observer.disconnect();
+
         CURRENT_URL = trim_url(window.location.href);
         main();
     }
@@ -543,7 +563,6 @@ async function main(){
         return;
     }
 
-    console.log('got here success');
      // get chosen gameweek
      find_chosen_gameweek(BOOTSTRAP_RESPONSE);
 
@@ -557,14 +576,14 @@ async function main(){
     }
 
 }
-function modify_DOM_for_sidebar(sidebar){
+function modify_DOM_for_sidebar(sidebar, td_selector, player_name_selector, colorFixtures=false){
 
     // The player's are divided into their position and 
     // each position has a table of it's own where player info is present inside each tr tag
     let all_tables = sidebar.querySelectorAll("table");
     for (let table of all_tables){
         // the td element for all players is inside the tbody of each table with the class that starts with Table_PrimaryCell
-        let all_td_elements = table.querySelector("tbody").querySelectorAll("[class^='Table__PrimaryCell']");
+        let all_td_elements = table.querySelector("tbody").querySelectorAll(td_selector);
 
         for (let required_td of all_td_elements){
             
@@ -585,7 +604,7 @@ function modify_DOM_for_sidebar(sidebar){
                 let fixtures_div = required_td.querySelector(".past-fixtures");
                 if (fixtures_div) fixtures_div.remove();
 
-                let player_name = required_td.querySelector("[class^='Media__Body']").innerText.split('\n')[0]
+                let player_name = required_td.querySelector(player_name_selector).innerText.split('\n')[0]
                 let team_id = TEAM_ID_DICT[teamCode]
                 fixtures_div = create_past_fixtures_div_element(get_player_id(player_name, team_id), team_id, true);
                 // inject the past few fixtures
@@ -595,7 +614,14 @@ function modify_DOM_for_sidebar(sidebar){
             }catch(err){
                 console.log(err);
             }
+            if (colorFixtures) add_color_attribute_to_elements(required_td.parentElement.querySelectorAll("[class^='styles__FixtureCell']"));
         }
+    }
+}
+
+function add_color_attribute_to_elements(array_of_elements){
+    for (let element of array_of_elements){
+        element.classList.add("fpl360-background-color");
     }
 }
 // add mutation listener to run the main function again if the route changes
