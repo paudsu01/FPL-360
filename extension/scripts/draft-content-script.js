@@ -217,9 +217,7 @@ async function modifyDOM(){
             }
 
         }
-
     }
-
     // if the user is on the transfers page, then need to add away jersey if necessary
 
     // loop finished, setup mutation observer
@@ -457,7 +455,7 @@ function setup_mutation_observer_for_pitch_changes(){
 
     let pitchElement = document.querySelector("[data-testid='pitch']");
     // Options for the observer (which mutations to observe)
-    let config = { childList: true, subtree: true, attributes: true};
+    var config = { characterData: true, attributes: false, childList: false, subtree: true };
     pitch_observer.observe(pitchElement, config)
     
 }
