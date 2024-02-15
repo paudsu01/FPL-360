@@ -156,12 +156,11 @@ function create_next_few_fixtures_div_element(teamID, colorOnly = false){
    return MAIN_DIV_ELEMENT;
 }
 
-function modify_DOM_for_sidebar(){
+function modify_DOM_for_sidebar(sidebar){
 
-    const SIDEBAR = document.querySelector("[class^='SquadBase__PusherSecondary']");
     // The player's are divided into their position and 
     // each position has a table of it's own where player info is present inside each tr tag
-    let all_tables = SIDEBAR.querySelectorAll("table");
+    let all_tables = sidebar.querySelectorAll("table");
     for (let table of all_tables){
         // the tr element for all players is inside the tbody of each table
         let all_tr_elements = table.querySelector("tbody").querySelectorAll("tr");
@@ -211,10 +210,6 @@ function modify_DOM_for_sidebar(){
 
     }
 
-    // disconnect obersver if setup already
-    if (bench_observer) bench_observer.disconnect();
-    // setup mutation observer to observe changes in sidebar DOM
-    setup_mutation_observer_for_sidebar_changes(SIDEBAR);
 }
 
 async function modifyDOM(modifySidebar=true){
@@ -321,7 +316,15 @@ async function modifyDOM(modifySidebar=true){
 
     // also need to add mutation observer to observe changes
     if (URL_CODE == 'transfers' && modifySidebar){
-        modify_DOM_for_sidebar();
+
+        // Layout__Secondary
+        let sidebar = document.querySelector("[class^='SquadBase__PusherSecondary']");
+        modify_DOM_for_sidebar(sidebar);
+
+        // disconnect obersver if setup already
+        if (bench_observer) bench_observer.disconnect();
+        // setup mutation observer to observe changes in sidebar DOM
+        setup_mutation_observer_for_sidebar_changes(sidebar);
     }
 
     // loop finished, setup mutation observer
@@ -580,7 +583,13 @@ function setup_mutation_observer_for_sidebar_changes(sidebar){
     bench_observer = new MutationObserver(()=>{
         // only interested if sidebar's DOM modified when in transfers page
          if (trim_url(window.location.href) == CURRENT_URL){
-            modify_DOM_for_sidebar();
+            let sidebar = document.querySelector("[class^='SquadBase__PusherSecondary']");
+            modify_DOM_for_sidebar(sidebar);
+
+            // disconnect obersver if setup already
+            if (bench_observer) bench_observer.disconnect();
+            // setup mutation observer to observe changes in sidebar DOM
+            setup_mutation_observer_for_sidebar_changes(sidebar);
         }
     });
 
