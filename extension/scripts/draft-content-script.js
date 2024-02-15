@@ -4,6 +4,7 @@ var pitch_observer;
 var sidebar_observer;
 const SELECTOR_OBJECT = {
     'transactions' : "[class^='Layout__Secondary']",
+    'transactions-remove' : "[class^='Layout__Main']",
     'transactions-trade' : "fieldset",
     'event': "[data-testid='pitch']",
     'my-team': "[data-testid='pitch']",
@@ -164,21 +165,40 @@ function modifyDOMtransactions(){
 
             let td_element_selector = "[class^='styles__NameCell']"
             let player_name_selector = "[class^='styles__TradeElementText']"
-            modify_DOM_for_sidebar(fielsetElement, td_element_selector, player_name_selector, true)
+            let fixture_selector = "[class^='styles__FixtureCell']";
+            modify_DOM_for_table(fielsetElement, td_element_selector, player_name_selector, true, fixture_selector)
         }
 
-    } else if (URL_CODE.includes("transactions") && URL_CODE != "transactions-trade"){
+    } else {
 
+        // modify main layout first
+        if (URL_CODE == "transactions"){
+
+        } else {
+
+            let main_bar = document.querySelector("[class^='Layout__Main']");
+            let td_element_selector = "[class^='styles__ElementCell']";
+            let player_name_selector = "[class^='Media__Body']";
+            let fixture_selector = "[class^='styles__FixturesCell']";
+            modify_DOM_for_table(main_bar, td_element_selector, player_name_selector, true, fixture_selector)
+            
+        }
+
+        // modify sidebar for both transactions and transactions/remove
         let sidebar = document.querySelector("[class^='Layout__Secondary']");
         let td_element_selector = "[class^='Table__PrimaryCell']";
         let player_name_selector = "[class^='Media__Body']";
-        modify_DOM_for_sidebar(sidebar, td_element_selector, player_name_selector);
+        modify_DOM_for_table(sidebar, td_element_selector, player_name_selector);
 
-        setup_mutation_observer_for_sidebar_change(sidebar);
-    } 
+        if (URL_CODE == "transactions"){
+            setup_mutation_observer_for_transaction_changes(sidebar, { attributes: false, childList: true, subtree: true });
+        } else {
+            setup_mutation_observer_for_transaction_changes(document.body, { attributes: true, childList: true, subtree: true });
+        }
+    }
 }
 
-function setup_mutation_observer_for_sidebar_change(sidebar){
+function setup_mutation_observer_for_transaction_changes(sidebar, config){
 
     if (sidebar_observer) sidebar_observer.disconnect();
 
@@ -186,7 +206,6 @@ function setup_mutation_observer_for_sidebar_change(sidebar){
         modifyDOMtransactions();
     });
     
-    let config = { attributes: false, childList: true, subtree: true }
     sidebar_observer.observe(sidebar, config = config);
 }
 
@@ -263,7 +282,6 @@ async function modifyDOM(){
     // loop finished, setup mutation observer
     if (URL_CODE == 'my-team'){
         setup_mutation_observer_for_pitch_changes();
-
     }
 }
 
@@ -576,11 +594,11 @@ async function main(){
     }
 
 }
-function modify_DOM_for_sidebar(sidebar, td_selector, player_name_selector, colorFixtures=false){
+function modify_DOM_for_table(parentElement, td_selector, player_name_selector, colorFixtures=false, fixtureSelector=null){
 
     // The player's are divided into their position and 
     // each position has a table of it's own where player info is present inside each tr tag
-    let all_tables = sidebar.querySelectorAll("table");
+    let all_tables = parentElement.querySelectorAll("table");
     for (let table of all_tables){
         // the td element for all players is inside the tbody of each table with the class that starts with Table_PrimaryCell
         let all_td_elements = table.querySelector("tbody").querySelectorAll(td_selector);
@@ -594,7 +612,6 @@ function modify_DOM_for_sidebar(sidebar, td_selector, player_name_selector, colo
 
                 // Change img attribute to swap for away jersey as necessary
                 modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
-
             }
 
             try {
@@ -614,7 +631,7 @@ function modify_DOM_for_sidebar(sidebar, td_selector, player_name_selector, colo
             }catch(err){
                 console.log(err);
             }
-            if (colorFixtures) add_color_attribute_to_elements(required_td.parentElement.querySelectorAll("[class^='styles__FixtureCell']"));
+            if (colorFixtures) add_color_attribute_to_elements(required_td.parentElement.querySelectorAll(fixtureSelector));
         }
     }
 }
