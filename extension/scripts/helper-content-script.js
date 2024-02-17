@@ -179,12 +179,14 @@ async function check_if_away_jersey_needed(playerButtonElement, teamCode, use_re
         // element might take time to load
         await waitForElement(playerButtonElement, querySelectorParameter)
         // only pick first team if double gameweek
-        let oppositionTeam = playerButtonElement.querySelector(querySelectorParameter).innerText.split(',')[0];
-        let pattern = new RegExp(/\([HA]\)/);
-        let matches = oppositionTeam.match(pattern);
-        if (matches && matches[0] == '(A)'){
-            awayJerseyNeeded = true;
-        }
+            if (playerButtonElement.querySelector(querySelectorParameter)){
+                var oppositionTeam = playerButtonElement.querySelector(querySelectorParameter).innerText.split(',')[0];
+                let pattern = new RegExp(/\([HA]\)/);
+                let matches = oppositionTeam.match(pattern);
+                if (matches && matches[0] == '(A)'){
+                    awayJerseyNeeded = true;
+                }
+            }
     }
 
     return awayJerseyNeeded

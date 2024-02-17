@@ -242,17 +242,18 @@ async function modifyDOM(modifySidebar=true){
                     let sourceElement= playerElement.querySelector("source");
 
                     if (URL_CODE == 'my-team'){
-                        var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, true, TEAM_AWAY_DICT, "span")
+                            var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, true, TEAM_AWAY_DICT, "[class^='PitchElementData__ElementValue']")
                     } else {
-                        var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, false, TEAM_AWAY_DICT, "span")
+                        var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, false, TEAM_AWAY_DICT, "[class^='PitchElementData__ElementValue']")
                     }
-
+                    
                     modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode);
                 }
             }
 
         } catch (err){
             // error when no a player removed and jo jersey there to know which the player is
+            console.log('err');
         }
 
         if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
@@ -742,6 +743,7 @@ async function main(){
         // Swap kits if needed after element discovered
         await waitForElement(document.body,"[data-testid='pitch']");
         modifyDOM();
+        
     }
 
 }
