@@ -483,7 +483,6 @@ function create_past_fixtures_div_element(playerID, teamID){
             for (let each_game of player_event_data.explain){
                 fixture = fixture + ', ' + get_fixture(each_game.fixture, teamID)
             }
-            if (fixture != '') fixture = fixture.slice(0, fixture.length -2)
         }
         // show Gameweek, team, xG, xA
         info.innerText = `GW ${start} ${fixture} xG ${stats.expected_goals} xA ${stats.expected_assists}`
