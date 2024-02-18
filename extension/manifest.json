@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FPL 360",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Complete FPL chrome extension",
   "icons": {
     "16": "img/icons/16x16.png",

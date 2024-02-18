@@ -165,6 +165,39 @@ function waitForElement(parentElement, selector){
     )
 }
 
+function create_team_away_dict(fixtures, object_key){
+
+    // Reset team-away-dict
+    TEAM_AWAY_DICT = {};
+    // let team_fixture_info be a mapping from team name to a list which contains two booleans(first one being a true/false(away being true)
+    // and the second one whether or not the game has finished)
+    // Only store the first game they played and swap with their next name if the first game is finished
+    let team_fixture_info = {};
+    for (let fixture of fixtures){
+        let home_team = ID_TEAM_DICT[fixture["team_h"]];
+        let away_team = ID_TEAM_DICT[fixture["team_a"]];
+
+        assign_value_to_team_key(home_team, false, fixture, team_fixture_info, object_key);
+        assign_value_to_team_key(away_team, true, fixture, team_fixture_info, object_key);
+    }
+}
+
+function assign_value_to_team_key(team_code, is_away, fixture, team_fixture_info, object_key){
+
+	   if (!(team_code in team_fixture_info)) {
+	       team_fixture_info[team_code] = [is_away, fixture[object_key]];
+	       TEAM_AWAY_DICT[team_code] = is_away;
+	   } else {
+
+	       // only take the current fixture if the previous fixture hasn't finished
+	       if (team_fixture_info[team_code][1]){
+	           team_fixture_info[team_code] = [is_away, fixture[object_key]];
+	           TEAM_AWAY_DICT[team_code] = is_away;
+	       }
+	   }
+}
+
+
 async function check_if_away_jersey_needed(playerButtonElement, teamCode, use_regex, dict, querySelectorParameter){
 
     let awayJerseyNeeded = false;

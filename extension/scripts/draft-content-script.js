@@ -420,16 +420,11 @@ function get_url_code_for_transactions(url){
     }
 }
 
+
 function create_team_name_away_fixture_dict_and_modify_DOM(fixtures){
 
     if (!(ALL_SETTINGS["away-home-jersey"] == false)){
-        TEAM_AWAY_DICT = {};
-        for (let fixture of fixtures){
-            let home_team = ID_TEAM_DICT[fixture["team_h"]];
-            let away_team = ID_TEAM_DICT[fixture["team_a"]];
-            if (!(home_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[home_team] = false;
-            if (!(away_team in TEAM_AWAY_DICT)) TEAM_AWAY_DICT[away_team] = true;
-    }
+        create_team_away_dict(fixtures, "started");
     }
         let selector = SELECTOR_OBJECT[URL_CODE];
        // Swap kits if needed after element discovered
