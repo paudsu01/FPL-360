@@ -16,7 +16,7 @@ For away kits, the image is in `png` format, and it is accessed using `https://c
 ## Prerequisites & running `kits.py`
 Ideally, this would need to be done only once a year before the new season starts.
 1. Make sure the links mentioned in section above are working correctly. 
-2. Update `teams.json` manually.
+2. Update `config.json` manually.
     * Increment `season`.
     * Remove the three old premier league team mappings
     * Add the three new premier league team mappings
@@ -26,4 +26,4 @@ Ideally, this would need to be done only once a year before the new season start
 
         ii). You will need to find the team's short name which is the key using https://fantasy.premierleague.com/api/bootstrap-static/
         ```
-3. Run `kits.py`. `kits.py` will not run if the teams mentioned in `teams.json` are incorrect.
+3. Run `kits.py`. `kits.py` will not run if the teams mentioned in `config.json` are incorrect.
