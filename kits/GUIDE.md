@@ -1,4 +1,4 @@
-`kits.py` downloads the home and away kits of current season's premier league teams. The downloaded images are in `png` format. Each kit is stored in three different dimensions:
+`kits.py` downloads the home and away kits of current season's premier league teams. The downloaded images are in `webp` format. Each kit is stored in three different dimensions:
 
     * 66w : 66 x 87
     * 110w : 110 x 145
