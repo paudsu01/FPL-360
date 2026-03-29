@@ -1,0 +1,9 @@
+about-time==4.2.1
+alive-progress==3.3.0
+certifi==2026.2.25
+charset-normalizer==3.4.6
+graphemeu==0.7.2
+idna==3.11
+pillow==12.1.1
+requests==2.33.0
+urllib3==2.6.3
