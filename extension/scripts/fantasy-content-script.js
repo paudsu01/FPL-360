@@ -13,16 +13,6 @@ var bench_observer;
 
 // Functions
 
-function get_increment_second_goalie_indexes(){
-    if (URL_CODE == "event"){
-        return [0, 2, 22]
-    } else if (URL_CODE == "my-team"){
-        return [0, 3, 33]  
-    } else {
-        return [0, 3, 3]
-    }
-}
-
 function create_next_few_fixtures_object(teamID, start){
 
    let end = Math.min(start+4, 38)
@@ -214,20 +204,17 @@ function modify_DOM_for_sidebar(sidebar){
 
 async function modifyDOM(modifySidebar=true){
 
-    let pitchElement = document.querySelector("[data-testid='pitch']");
+    let pitchElement = document.querySelector('[data-sponsor="default"]');
     // the player jersey boxes in the website are inside button tags
-    let all_buttons = pitchElement.querySelectorAll("button");
+    // should be 15 players in a team
+    let all_buttons = pitchElement.querySelectorAll("button[data-pitch-element='true']")
+    console.assert(all_buttons.length == 15, "DOM injection error: More than 15 buttons(players) found");
 
+    // First goalie index is always 0; second goalie index is 1 for "transfers" page, 10 for the rest("my-team" and "event")
+    let secondGoalieValue = (URL_CODE == "transfers") ? 1 : 10;
 
-    // for points page:  30 button tags : 2 for each player
-    // for transfers and my-team page:  45 button tags : 3 for each player
-    // Skip goalkeeper buttons(indexes 0 and 1 for points, 0-2 for the rest)
-    let [startValue, incrementValue, secondGoalieValue] = get_increment_second_goalie_indexes();
-
-    // Necessary to avoid unnecessary between button tags including buttons for second goalie
-    // loop over buttons with index 2,4,... for points page
-    // loop over buttons with index 3,6,... for transfers, my-team page
-   for (let currentIndex=startValue; currentIndex < all_buttons.length; currentIndex += incrementValue){
+   // loop over each button. Each button is associated with a player in the team.
+   for (let currentIndex=0; currentIndex < all_buttons.length; currentIndex += 1){
 
         let playerElement = all_buttons[currentIndex];
         let imgElement = playerElement.querySelector("img");
@@ -519,9 +506,9 @@ function get_current_gameweek(){
     }
 
 }
-function find_chosen_gameweek(all_info_dict){
+function find_chosen_gameweek(bootstrapResponse){
 
-    let all_gameweeks = all_info_dict["events"];
+    let all_gameweeks = bootstrapResponse["events"];
     for (let gameweek of all_gameweeks){
         if (gameweek["is_current"] === true){
             CHOSEN_GAMEWEEK = Number(gameweek["id"]);
@@ -534,9 +521,9 @@ function find_chosen_gameweek(all_info_dict){
 
     if (url.endsWith("my-team")){
         URL_CODE = "my-team";
-        CHOSEN_GAMEWEEK += 1;
+        CHOSEN_GAMEWEEK = Math.min(CHOSEN_GAMEWEEK+1, 38);
     } else if (url.endsWith("transfers")){
-        CHOSEN_GAMEWEEK += 1;
+        CHOSEN_GAMEWEEK = Math.min(CHOSEN_GAMEWEEK+1, 38);
         URL_CODE = "transfers";
     } else {
         URL_CODE = "event";
@@ -548,30 +535,43 @@ function find_chosen_gameweek(all_info_dict){
 
 async function fetch_team_name_away_fixture_dict_and_modify_DOM(){
 
-    let response = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
-    let fixtures = await response.json();
+    // Look for cached fixture data for the current gameweek
+    var fixtures = GAMEWEEK_TO_FIXTURES_DATA[CHOSEN_GAMEWEEK];
+    // i.e. if it isn't cached, then fetch and cache
+    if (fixtures === undefined){
+        let response = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
+        fixtures = await response.json();
+        // Store the fetched fixtures in the mapping for future use
+        // This prevents repeated network requests for the same gameweek
+        GAMEWEEK_TO_FIXTURES_DATA[CHOSEN_GAMEWEEK] = fixtures; // cache for future uses
+    }
+
     create_team_away_dict(fixtures, "finished");
-   
      // Swap kits if needed after element discovered
-     waitForElement(document.body, "[data-testid='pitch']").then(()=>{
+    waitForElement(document.body, '[data-sponsor="default"]').then(() => {
         modifyDOM();
-     })
+    })
 }
 
 function check_if_url_is_a_valid_link(){
 
-    let url = trim_url(window.location.href);
-    let my_team_re = new RegExp("^https?://fantasy\.premierleague\.com/my-team/?$")
-    let transfer_re = new RegExp("^https?://fantasy\.premierleague\.com/transfers/?$")
-    let event_re = new RegExp("^https?://fantasy\.premierleague\.com/entry/[0-9]*/event/[0-9]{1,2}/?$");
+    // "window.location.pathname"
+    // returns a string that contains the path and filename of the current URL
+    // after the domain name and port, but before any query parameters (?) or hash fragments (#)
+    // it includes an initial leading forward slash (/)
+
+    let url = window.location.pathname;
+    let my_team_re = new RegExp("^/my-team/?$")
+    let transfer_re = new RegExp("^/transfers/?$")
+    let event_re = new RegExp("^/entry/[0-9]+/event/[0-9]{1,2}/?$");
 
     if (my_team_re.test(url) || transfer_re.test(url) || event_re.test(url)){
         return true;
     }
     // all other links are invalid ( no need to inject content-scripts into them)
     return false;
-
 }
+
 function setup_mutation_observer_for_sidebar_changes(sidebar){
 
     bench_observer = new MutationObserver(()=>{
@@ -705,12 +705,11 @@ async function main(){
     if (!is_a_proper_link){
         return;
     }
-
     
      // if url is points then get gameweek from url
      // if pick team then use api to get chosen gameweek
 
-     // get chosen gameweek
+     // get chosen gameweek -> stores in CHOSEN_GAMEWEEEK variable
      find_chosen_gameweek(BOOTSTRAP_RESPONSE);
 
      // make a dict that maps from teamName to away fixture value(true if the team has a next away fixture else false)
@@ -720,11 +719,9 @@ async function main(){
         fetch_team_name_away_fixture_dict_and_modify_DOM();
      } else {
         // Swap kits if needed after element discovered
-        await waitForElement(document.body,"[data-testid='pitch']");
+        await waitForElement(document.body, '[data-sponsor="default"]');
         modifyDOM();
-        
     }
-
 }
 
 // add mutation listener to run the main function again if the route changes

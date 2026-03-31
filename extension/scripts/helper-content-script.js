@@ -4,6 +4,10 @@
 
 // Base path for kit images (.webp)
 const KIT_BASE = chrome.runtime.getURL("img/kits/");
+// Mapping from gameweek value to fixtures event API response from 
+// `https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
+// Done for caching purposes. Check out `fetch_team_name_away_fixture_dict_and_modify_DOM`
+const GAMEWEEK_TO_FIXTURES_DATA={};
 // Team code to next 5 fixtures
 var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 // Team code to true if away fixture in current gameweek else false
@@ -196,7 +200,7 @@ function create_team_away_dict(fixtures, object_key){
     TEAM_AWAY_DICT = {};
     // let team_fixture_info be a mapping from team name to a list which contains two booleans(first one being a true/false(away being true)
     // and the second one whether or not the game has finished)
-    // Only store the first game they played and swap with their next name if the first game is finished
+    // Only store the first game they played and swap with their next game if the first game is finished
     let team_fixture_info = {};
     for (let fixture of fixtures){
         let home_team = ID_TEAM_DICT[fixture["team_h"]];
@@ -214,7 +218,7 @@ function assign_value_to_team_key(team_code, is_away, fixture, team_fixture_info
 	       TEAM_AWAY_DICT[team_code] = is_away;
 	   } else {
 
-	       // only take the current fixture if the previous fixture hasn't finished
+	       // only take this current fixture if the previous fixture has finished
 	       if (team_fixture_info[team_code][1]){
 	           team_fixture_info[team_code] = [is_away, fixture[object_key]];
 	           TEAM_AWAY_DICT[team_code] = is_away;
