@@ -1,7 +1,6 @@
 // Variable declaration
-var ALL_FUTURE_FIXTURES;
-// API response from "https://fantasy.premierleague.com/api/fixtures?future=0
-var ALL_PAST_FIXTURES;
+// API response from "https://fantasy.premierleague.com/api/fixtures
+var ALL_FIXTURES;
 // User's team id
 var USER_ID;
 // User's team data
@@ -27,7 +26,7 @@ function create_next_few_fixtures_object(teamID, start){
    }
 
    // go through all remaining fixtures and break if we find event "end + 1"
-   for (let fixture of ALL_FUTURE_FIXTURES){
+   for (let fixture of ALL_FIXTURES){
 
         if (fixture["team_h"] == teamID || fixture["team_a"] == teamID){
 
@@ -165,6 +164,7 @@ function modify_DOM_for_sidebar(sidebar){
             if ((!(ALL_SETTINGS["away-home-jersey"] == false)) && required_td.querySelectorAll("span")[1].innerText !== "GKP"){
 
                 // Change img attribute to swap for away jersey as necessary
+                // TODO
                 modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
 
             }
@@ -217,31 +217,26 @@ async function modifyDOM(modifySidebar=true){
    for (let currentIndex=0; currentIndex < all_buttons.length; currentIndex += 1){
 
         let playerElement = all_buttons[currentIndex];
-        let imgElement = playerElement.querySelector("img");
+        let pictureElement = playerElement.querySelector("picture");
+
+        // Skip when a player is removed and there is no jersey there to know which the player is in transfers page
+        if (URL_CODE== "transfers" && pictureElement === undefined) continue;
+        if (pictureElement === undefined) throw new Error("No img element found in pitch");
+
+        let imgElement = pictureElement.querySelector("img");
         let teamName = imgElement.getAttribute("alt");
-        let teamCode = TEAM_NAME_TO_CODE_DICT[teamName];
+        let team_short_name = TEAM_NAME_TO_SHORT_NAME_DICT[teamName];
+        console.log(`${teamName}: ${team_short_name}`);
 
-        try {
-            if (!(ALL_SETTINGS["away-home-jersey"] == false)){
-                // index 22 is for the bench goalie
-                if (currentIndex != secondGoalieValue && currentIndex != startValue) {
+        if (!(ALL_SETTINGS["away-home-jersey"] == false)){
+            // no away jersey for goalies unfortunately :(
+            if (currentIndex != secondGoalieValue && currentIndex != 0) {
 
-                    let sourceElement= playerElement.querySelector("source");
-
-                    if (URL_CODE == 'my-team'){
-                            var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, true, TEAM_AWAY_DICT, "[class^='PitchElementData__ElementValue']")
-                    } else {
-                        var away_jersey_needed = await check_if_away_jersey_needed(all_buttons[currentIndex], teamCode, false, TEAM_AWAY_DICT, "[class^='PitchElementData__ElementValue']")
-                    }
-                    
-                    modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode);
-                }
+                let away_jersey_needed = (team_short_name in TEAM_AWAY_DICT && TEAM_AWAY_DICT[team_short_name] === true) ? true : false;
+                modify_src_attributes(away_jersey_needed, pictureElement, team_short_name);
             }
-
-        } catch (err){
-            // error when no a player removed and jo jersey there to know which the player is
-            console.log('err');
         }
+        continue;
 
         if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
 
@@ -252,12 +247,12 @@ async function modifyDOM(modifySidebar=true){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                var fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[teamCode]);
+                var fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[team_short_name]);
                 playerElement.appendChild(fixtures_div);
             }
         
             var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
-            let player_id = get_player_id(player_web_name, TEAM_ID_DICT[teamCode]);
+            let player_id = get_player_id(player_web_name, TEAM_ID_DICT[team_short_name]);
             if (!(ALL_SETTINGS["last-few-gw"] == false)){
                 // inject their past 5 fixtures data after (Last few gameweeks points)
                 try {
@@ -265,7 +260,7 @@ async function modifyDOM(modifySidebar=true){
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                var past_fixtures_div = create_past_fixtures_div_element(player_id, TEAM_ID_DICT[teamCode]);
+                var past_fixtures_div = create_past_fixtures_div_element(player_id, TEAM_ID_DICT[team_short_name]);
                 playerElement.appendChild(past_fixtures_div);
             }
 
@@ -484,7 +479,7 @@ function create_past_fixtures_div_element(playerID, teamID){
 
 function get_fixture(fixtureID, teamID){
 
-    for (let each_fixture of ALL_PAST_FIXTURES){
+    for (let each_fixture of ALL_FIXTURES){
         if (each_fixture.id == fixtureID){
             return (each_fixture.team_h == teamID) ? `${ID_TEAM_DICT[each_fixture.team_a]}(A)` : `${ID_TEAM_DICT[each_fixture.team_h]}(H)`
         }
@@ -533,21 +528,13 @@ function find_chosen_gameweek(bootstrapResponse){
 
 }
 
-async function fetch_team_name_away_fixture_dict_and_modify_DOM(){
+function update_team_name_away_fixture_dict_and_modify_DOM(){
 
-    // Look for cached fixture data for the current gameweek
-    var fixtures = GAMEWEEK_TO_FIXTURES_DATA[CHOSEN_GAMEWEEK];
-    // i.e. if it isn't cached, then fetch and cache
-    if (fixtures === undefined){
-        let response = await fetch(`https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
-        fixtures = await response.json();
-        // Store the fetched fixtures in the mapping for future use
-        // This prevents repeated network requests for the same gameweek
-        GAMEWEEK_TO_FIXTURES_DATA[CHOSEN_GAMEWEEK] = fixtures; // cache for future uses
-    }
-
+    // Get fixtures for the `CHOSEN_GAMEWEEK`
+    const fixtures = ALL_FIXTURES.filter((obj) => obj.event == CHOSEN_GAMEWEEK);
     create_team_away_dict(fixtures, "finished");
-     // Swap kits if needed after element discovered
+
+     // Swap kits and modify DOM if needed after element discovered
     waitForElement(document.body, '[data-sponsor="default"]').then(() => {
         modifyDOM();
     })
@@ -619,17 +606,14 @@ async function initContentScript(){
     ALL_SETTINGS = await chrome.storage.local.get(all_ids);
 
     try {
-    let [bootstrapResponse, FutureFixturesResponse, PastFixturesResponse] = await Promise.all([
+    let [bootstrapResponse, FixturesResponse] = await Promise.all([
         // link to get info for current gameweek and team name and their appropriate ids
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        // Get all future fixtures 
-        fetch("https://fantasy.premierleague.com/api/fixtures/?future=1"),
-        // Get all past fixtures
-        fetch("https://fantasy.premierleague.com/api/fixtures/?future=0"),
+        // Get all fixtures 
+        fetch("https://fantasy.premierleague.com/api/fixtures/"),
             ])
     BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
-    ALL_FUTURE_FIXTURES = await FutureFixturesResponse.json();
-    ALL_PAST_FIXTURES = await PastFixturesResponse.json();
+    ALL_FIXTURES = await FixturesResponse.json();
 
     if (!(ALL_SETTINGS["last-few-gw"] == false)){
 
@@ -715,8 +699,8 @@ async function main(){
      // make a dict that maps from teamName to away fixture value(true if the team has a next away fixture else false)
      // and call the modifyDOM function after done ( The modifyDOM function is inside this function since the function is async and 
      // we need the fixture dict ready before we swap kits)
-     if (URL_CODE != "my-team" && (!(ALL_SETTINGS["away-home-jersey"] == false))){
-        fetch_team_name_away_fixture_dict_and_modify_DOM();
+     if (!(ALL_SETTINGS["away-home-jersey"] == false)){
+        update_team_name_away_fixture_dict_and_modify_DOM();
      } else {
         // Swap kits if needed after element discovered
         await waitForElement(document.body, '[data-sponsor="default"]');
@@ -727,5 +711,5 @@ async function main(){
 // add mutation listener to run the main function again if the route changes
 // This is necessary because content-script won't get loaded again as websites like this
 // use Javascript frameworks and Ajax calls to only update parts of the existing webpage content as the user navigates around the site
-window.onload = setup_mutation_observer_for_url_change;
 initContentScript();
+window.onload = setup_mutation_observer_for_url_change;

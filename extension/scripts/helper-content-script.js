@@ -4,10 +4,6 @@
 
 // Base path for kit images (.webp)
 const KIT_BASE = chrome.runtime.getURL("img/kits/");
-// Mapping from gameweek value to fixtures event API response from 
-// `https://fantasy.premierleague.com/api/fixtures/?event=${CHOSEN_GAMEWEEK}`)
-// Done for caching purposes. Check out `fetch_team_name_away_fixture_dict_and_modify_DOM`
-const GAMEWEEK_TO_FIXTURES_DATA={};
 // Team code to next 5 fixtures
 var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 // Team code to true if away fixture in current gameweek else false
@@ -18,8 +14,6 @@ var CHOSEN_GAMEWEEK=-1;
 var URL_CODE = '';
 // window.location.href value when content-script is loaded
 var CURRENT_URL = trim_url(window.location.href);
-// Team code to link for home and away jersey
-var TEAM_JERSEY_LINK_DICT={};
 // API response from "https://(fantasy|draft).premierleague.com/api/bootstrap-static"
 var BOOTSTRAP_RESPONSE;
 // store response from https://(fantasy|draft).premierleague.com/api/event/${GW}/live/
@@ -31,11 +25,11 @@ var FARTHEST_GAMEWEEK_WITH_DATA = null;
 /* 
     e.g ID_TEAM_DICT : 1 -> 'ARS'
     e.g TEAM_ID_DICT : 'ARS' -> 1
-    e.g TEAM_NAME_TO_CODE_DICT : 'Arsenal' -> 'ARS'
+    e.g TEAM_NAME_TO_SHORT_NAME_DICT: 'Arsenal' -> 'ARS'
 */
 var ID_TEAM_DICT={};
 var TEAM_ID_DICT={};
-var TEAM_NAME_TO_CODE_DICT={};
+var TEAM_NAME_TO_SHORT_NAME_DICT={};
 // player webname to player id mapping
 // the value is going to be a list since different id players can have the same web name
 var PLAYER_WEB_NAME_TO_ID = {};
@@ -71,8 +65,8 @@ function trim_url(link){
 
     @returns: kitpath based on `chrome.runtime.getURL`
 */
-function get_kit_path(team_short_name, is_home, size){
-    let location = (is_home) ? "home" : "away";
+function get_kit_path(team_short_name, is_away, size){
+    let location = (is_away) ? "away" : "home";
     // For example, home kit for MCI 66w is stored in img/kits/MCI/home_66.webp
     return `${KIT_BASE}/${team_short_name}/${location}_${size}.webp`;
 }
@@ -97,12 +91,13 @@ function get_player_id(webName, teamID){
 
 }
 
-function modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode){
+function modify_src_attributes(away_jersey_needed, pictureElement, team_short_name){
+    let sourceElement = pictureElement.querySelector("source");
+    let imgElement = pictureElement.querySelector("img");
 
-    let jerseyLink = away_jersey_needed ? TEAM_JERSEY_LINK_DICT[teamCode]["away"] : TEAM_JERSEY_LINK_DICT[teamCode]["home"]
-    // remove everything after .png in the link
-    jerseyLink = jerseyLink.replace(/\?width=\d*&height=[0-9]*/g, "");
-
+    let kit_path_66 = get_kit_path(team_short_name, away_jersey_needed, 66);
+    let kit_path_110 = get_kit_path(team_short_name, away_jersey_needed, 110);
+    let kit_path_220 = get_kit_path(team_short_name, away_jersey_needed, 220);
     // srcset is of the type
     // srcset="/dist/img/shirts/standard/shirt_6-66.webp 66w, /dist/img/shirts/standard/shirt_6-110.webp 110w, /dist/img/shirts/standard/shirt_6-220.webp 220w"
 
@@ -111,11 +106,12 @@ function modify_src_attributes(away_jersey_needed, sourceElement, imgElement, te
     // 110w : 110 x 145
     // 220w : 220 x 290
 
-    let srcsetAttribute = `${jerseyLink}?width=66&height=87 66w, ${jerseyLink}?width=110&height=145 110w, ${jerseyLink}?width=220&height=290 220w`
+    let srcsetAttribute = `${kit_path_66} 66w, ${kit_path_110} 110w, ${kit_path_220} 220w`
     sourceElement.setAttribute("srcset", srcsetAttribute);
-    imgElement.setAttribute("srcset", srcsetAttribute)
+    imgElement.setAttribute("srcset", srcsetAttribute);
+    imgElement.setAttribute("src", kit_path_66);
 
-    imgElement.setAttribute("src", jerseyLink + "?width=66&height=87")
+    pictureElement.setAttribute("style", "transform: scale(1.45, 1.2)");
 }
 
 function get_color_for_points(points){
@@ -137,13 +133,13 @@ function create_team_name_id_code_dict(bootstrapResponse){
     /* 
         e.g ID_TEAM_DICT : 1 -> 'ARS'
         e.g TEAM_ID_DICT : 'ARS' -> 1
-        e.g TEAM_NAME_TO_CODE_DICT : 'Arsenal' -> 'ARS'
+        e.g TEAM_NAME_TO_SHORT_NAME_DICT : 'Arsenal' -> 'ARS'
     */
     let teams = bootstrapResponse["teams"];
     for (let team of teams){
         ID_TEAM_DICT[team.id] = team["short_name"];
         TEAM_ID_DICT[team.short_name] = team.id;
-        TEAM_NAME_TO_CODE_DICT[team.name] = team["short_name"];
+        TEAM_NAME_TO_SHORT_NAME_DICT[team.name] = team["short_name"];
     }
 }
 
