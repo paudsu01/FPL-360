@@ -604,21 +604,7 @@ function setup_mutation_observer_for_url_change(){
         if (bench_observer) bench_observer.disconnect();
 
         CURRENT_URL = trim_url(window.location.href);
-
-        // fetch latest team of the user if user navigated to transfers page
-        if (CURRENT_URL.endsWith("transfers") && (!(ALL_SETTINGS["profit-loss"] == false))){
-            if (!(USER_ID === undefined)){
-                fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
-                    response=>response.json()).then((response)=>{
-                        USER_DATA = response;
-                        main();
-                    })
-            } else {
-                    main()
-            }
-        } else {
-            main();
-        }
+        main();
     }
   })
 
@@ -633,9 +619,7 @@ async function initContentScript(){
     ALL_SETTINGS = await chrome.storage.local.get(all_ids);
 
     try {
-    let [awayResponse, bootstrapResponse, FutureFixturesResponse, PastFixturesResponse] = await Promise.all([
-        // link to get team name and away jersey link
-        fetch("https://paudsu01.github.io/FPL-360/extension/FPL-HOME-AWAY.json"),
+    let [bootstrapResponse, FutureFixturesResponse, PastFixturesResponse] = await Promise.all([
         // link to get info for current gameweek and team name and their appropriate ids
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
         // Get all future fixtures 
@@ -643,14 +627,13 @@ async function initContentScript(){
         // Get all past fixtures
         fetch("https://fantasy.premierleague.com/api/fixtures/?future=0"),
             ])
-    TEAM_JERSEY_LINK_DICT = await awayResponse.json();
     BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
     ALL_FUTURE_FIXTURES = await FutureFixturesResponse.json();
     ALL_PAST_FIXTURES = await PastFixturesResponse.json();
 
     if (!(ALL_SETTINGS["last-few-gw"] == false)){
 
-        // fetch the last few events data
+        // fetch the last "five" events(gameweeks) data (will be less than five if gameweek_value < 5)
         let gameweek_value = get_current_gameweek()   ;
         let end = Math.max(1, gameweek_value - 4);
         while (gameweek_value >= end){
@@ -661,31 +644,34 @@ async function initContentScript(){
         }
     }
 
-     // make a dict of team id to team code and 
-     // a dict that maps from team name to team code
-     create_team_name_id_code_dict(BOOTSTRAP_RESPONSE);
-     
-     // create dict from player web name to id
-     create_player_dict();
+    // make a dict of team id to team code and 
+    // a dict that maps from team name to team code
+    create_team_name_id_code_dict(BOOTSTRAP_RESPONSE);
+    
+    // create dict from player web name to id
+    create_player_dict();
+    
+    if (ALL_SETTINGS["profit-loss"] == false){
+        main()
+    } else{
 
-    waitForElement(document.body, "[class^='Navigation__StyledUL']").then(()=>{
-            try {
-                USER_ID = get_user_id(trim_url(document.querySelector("[class^='Navigation__StyledUL']").querySelector("[href^='/entry/']").getAttribute("href")));
-                if (!(ALL_SETTINGS["profit-loss"] == false)){
-                    fetch(`https://fantasy.premierleague.com/api/my-team/${USER_ID}/`).then(
-                        response=>response.json()).then((response)=>{
-                            USER_DATA = response;
-                            main();
-                    })
-                } else {
-                    main();
-                }
-            } catch(err) {
+        // We need to access the user's ID using the API call using "https://fantasy.premierleague.com/api/me"
+        // However, we cannot fetch this from the content-script itself. So, we inject js code to the DOM to do this
+        // Look at inject.js for more details
+
+        // Add a listener which collects the user ID
+        window.addEventListener("message", (message)=>{
+            // make sure it is correct data type from `inject.js`
+            if (message.data.type == 'FPL_ME'){
+                USER_ID = message.data.user_id;
+                USER_DATA = message.data.user_data;
                 main();
-                // this happens when creates their account at the beginning since they will have no previous events
-                // no need to fetch their data for profit/loss
             }
         })
+        // inject script that fetches the user id and sends us the message using `postMessage`
+        // Look at `inject.js`
+        injectJSFileToDOM("scripts/inject.js")
+    }
 
     } catch (err){
         console.log(err);

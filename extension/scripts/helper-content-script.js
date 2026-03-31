@@ -2,6 +2,8 @@
 
 // variables
 
+// Base path for kit images (.webp)
+const KIT_BASE = chrome.runtime.getURL("img/kits/");
 // Team code to next 5 fixtures
 var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
 // Team code to true if away fixture in current gameweek else false
@@ -22,11 +24,13 @@ var LAST_FEW_EVENTS_DATA ={};
 var NEXT_FEW_EVENTS_DATA ={};
 var LAST_GAMEWEEK_WITH_DATA = null;
 var FARTHEST_GAMEWEEK_WITH_DATA = null;
-// Team id to name(teamn code e.g ARS for arsenal)
+/* 
+    e.g ID_TEAM_DICT : 1 -> 'ARS'
+    e.g TEAM_ID_DICT : 'ARS' -> 1
+    e.g TEAM_NAME_TO_CODE_DICT : 'Arsenal' -> 'ARS'
+*/
 var ID_TEAM_DICT={};
-// Team name code to fpl id
 var TEAM_ID_DICT={};
-// Team name to team code
 var TEAM_NAME_TO_CODE_DICT={};
 // player webname to player id mapping
 // the value is going to be a list since different id players can have the same web name
@@ -53,6 +57,22 @@ function trim_url(link){
 
 }
 
+/*
+    get_kit_path(team_short_name, size)
+        Returns chrome runtime path to kit images
+    
+    @params: team_short_name(string) = Team code name e.g. ARS, MCI
+    @params: is_home(boolean)
+    @params: size(int) = 66 | 110 | 220
+
+    @returns: kitpath based on `chrome.runtime.getURL`
+*/
+function get_kit_path(team_short_name, is_home, size){
+    let location = (is_home) ? "home" : "away";
+    // For example, home kit for MCI 66w is stored in img/kits/MCI/home_66.webp
+    return `${KIT_BASE}/${team_short_name}/${location}_${size}.webp`;
+}
+
 function get_player_event_data(gameweek, playerID){
 
     let all_players = LAST_FEW_EVENTS_DATA[gameweek]["elements"];
@@ -71,12 +91,6 @@ function get_player_id(webName, teamID){
         }
     }
 
-}
-
-function get_user_id(href){
-
-    let split_values = href.split('/');
-    return Number(split_values[split_values.length-3]);
 }
 
 function modify_src_attributes(away_jersey_needed, sourceElement, imgElement, teamCode){
@@ -114,9 +128,14 @@ function get_color_for_points(points){
         else return ["rgb(128, 98, 214)", "white"];
 }
 
-function create_team_name_id_code_dict(all_info_dict){
+function create_team_name_id_code_dict(bootstrapResponse){
 
-    let teams = all_info_dict["teams"];
+    /* 
+        e.g ID_TEAM_DICT : 1 -> 'ARS'
+        e.g TEAM_ID_DICT : 'ARS' -> 1
+        e.g TEAM_NAME_TO_CODE_DICT : 'Arsenal' -> 'ARS'
+    */
+    let teams = bootstrapResponse["teams"];
     for (let team of teams){
         ID_TEAM_DICT[team.id] = team["short_name"];
         TEAM_ID_DICT[team.short_name] = team.id;
@@ -125,6 +144,11 @@ function create_team_name_id_code_dict(all_info_dict){
 }
 
 function create_player_dict(){
+    /* 
+        e.g. PLAYER_WEB_NAME_TO_ID: 'Raya' -> [player id(int), team id(int)]
+        e.g. PLAYER_ID_TO_DATA: id(int) -> player object
+    */
+
     // creates player web name to id object and
     // creates player id to player data object
     for (let player_object of BOOTSTRAP_RESPONSE["elements"]){
@@ -132,6 +156,7 @@ function create_player_dict(){
         // create a empty list if no such key exists no far
         if (PLAYER_WEB_NAME_TO_ID[player_object.web_name] === undefined) PLAYER_WEB_NAME_TO_ID[player_object.web_name] = [];
 
+        // one to many mapping so need to store both player id and team id
         PLAYER_WEB_NAME_TO_ID[player_object.web_name].push([player_object.id, player_object.team]);
         PLAYER_ID_TO_DATA[player_object.id] = player_object;
     }
@@ -224,4 +249,13 @@ async function check_if_away_jersey_needed(playerButtonElement, teamCode, use_re
 
     return awayJerseyNeeded
 
+}
+
+// Run JS file using a script tag in the document
+function injectJSFileToDOM(path_to_js, remove_onload = true){
+    const script = document.createElement("script");
+    script.src = chrome.runtime.getURL(path_to_js);
+
+    if (remove_onload) script.onload = () => script.remove(); // cleanup
+    document.documentElement.appendChild(script);
 }

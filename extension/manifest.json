@@ -18,12 +18,12 @@
       "css":["css/style.css"],
       "matches": ["https://fantasy.premierleague.com/*"],
       "run_at": "document_end"
-    },
+    }
+  ],
+  "web_accessible_resources": [
     {
-      "js": ["scripts/helper-content-script.js", "scripts/draft-content-script.js"],
-      "css":["css/style.css"],
-      "matches": ["https://draft.premierleague.com/*"],
-      "run_at": "document_end"
+      "resources": ["scripts/inject.js", "img/kits/*"],
+      "matches": ["https://fantasy.premierleague.com/*"]
     }
   ],
   "permissions": ["storage"]
