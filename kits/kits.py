@@ -7,7 +7,7 @@ import io
 
 from PIL import Image
 from alive_progress import alive_bar
-from typing import List, Dict
+from typing import Dict
 
 # Path(Directory) to store kits
 IMAGE_DIRECTORY = os.path.join(
@@ -45,51 +45,13 @@ def verify(bootstrap: Dict) -> Dict:
             """)
 
 
-def download_home_kits(teams: List[Dict]) -> None:
+def download_kits(config: Dict) -> None:
     """
-    Download all the team's home kits and save them in `extension/img/kits/`
-    The home kit can be accessed using
-        "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_{team_id}-{width}.webp"
-
-    For each team, images of 3 different dimensions are downloaded:
-        * 66w : 66 x 87
-        * 110w : 110 x 145
-        * 220w : 220 x 290
-
-    Args:
-        teams:  List of premier league teams info. Each element is a dict
-                We are interested in the team's code
-                and their short name. e.g. ARS, MCI
-
-    Returns: None
-    """
-    # Show bar progress
-    with alive_bar(len(teams)) as bar:
-        for team in teams:
-
-            team_id = team["code"]
-            team_short_name = team["short_name"]
-
-            path = os.path.join(IMAGE_DIRECTORY, f"{team_short_name}")
-            os.makedirs(path, exist_ok=True)
-
-            for width in [66, 110, 220]:
-                link = f"https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_{team_id}-{width}.webp"
-                image_bytes = requests.get(link).content
-
-                image_path = os.path.join(path, f"home_{width}.webp")
-                with open(image_path, "wb") as out:
-                    out.write(image_bytes)
-
-            # Update bar progress
-            bar()
-
-
-def download_away_kits(config: Dict) -> None:
-    """
-    Download all the team's away kit and saves them in `extension/img/kits/`
-    The away kit can be accessed using
-        "https://cdn.sofifa.net/kits/{team_id}/{season}_1@3x.png"
+    Download all the team's home and away kits and
+    saves them in `extension/img/kits/`
+    The home and away kit can be accessed using
+        "https://cdn.sofifa.net/kits/{team_id}/{season}_{0|1}@3x.png"
+    Home kit is 1, while away is 0.
 
     * Note that the `team_id` of a team in sofifa
     isn't the same `team_id` of a team in FPL.
@@ -108,6 +70,7 @@ def download_away_kits(config: Dict) -> None:
     """
     teams = config["teams"]
     season = config["season"]
+    home_away = [("home", 0), ("away", 1)]
 
     # Show bar progress
     with alive_bar(len(teams)) as bar:
@@ -116,25 +79,28 @@ def download_away_kits(config: Dict) -> None:
             path = os.path.join(IMAGE_DIRECTORY, f"{team_short_name}")
             os.makedirs(path, exist_ok=True)
 
-            # Get the png image from sofifa
-            link = f"https://cdn.sofifa.net/kits/{team_id}/{season}_1@3x.png"
-            image_bytes = requests.get(link).content
+            for location, location_id in home_away:
+                # Get the png image from sofifa
+                link = f"https://cdn.sofifa.net/kits/{team_id}/{season}_{location_id}@3x.png"
+                image_bytes = requests.get(link).content
 
-            # create `ImageFile` pillow object
-            im = Image.open(io.BytesIO(image_bytes))
-            if im.mode in ("RGBA", "P"):
-                im = im.convert("RGBA")
-            else:
-                im = im.convert("RGB")
+                # create `ImageFile` pillow object
+                im = Image.open(io.BytesIO(image_bytes))
+                if im.mode in ("RGBA", "P"):
+                    im = im.convert("RGBA")
+                else:
+                    im = im.convert("RGB")
 
-            # resize the image and save as webp file
-            sizes = {66: (66, 87), 110: (110, 145), 220: (220, 290)}
-            # Loop, resize, and save
-            for size, dimensions in sizes.items():
-                # Use Resampling.LANCZOS for the highest quality downscaling
-                resized_im = im.resize(dimensions, Image.Resampling.LANCZOS)
-                image_path = os.path.join(path, f"away_{size}.webp")
-                resized_im.save(image_path, "WEBP", lossless=True)
+                # resize the image and save as webp file
+                sizes = {66: (66, 87), 110: (110, 145), 220: (220, 290)}
+                # Loop, resize, and save
+                for size, dimensions in sizes.items():
+                    # Use Resampling.LANCZOS
+                    # for the highest quality downscaling
+                    resized_im = im.resize(
+                        dimensions, Image.Resampling.LANCZOS)
+                    image_path = os.path.join(path, f"{location}_{size}.webp")
+                    resized_im.save(image_path, "WEBP", lossless=True)
 
             # Update bar progress
             bar()
@@ -168,10 +134,8 @@ def main():
         remove_existing_kit_images()
 
         # download home and away kits
-        #   home kits are downloaded from fantasy.premierleague.com
-        #   away kits are downloaded from sofifa.com
-        download_home_kits(bootstrap["teams"])
-        download_away_kits(config)
+        # kits are downloaded from sofifa.com
+        download_kits(config)
     else:
         raise Exception(
             f"Request for FPL bootstrap response failed: Got status code {r.status_code}"
