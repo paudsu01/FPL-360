@@ -4,8 +4,8 @@
 
 // Base path for kit images (.webp)
 const KIT_BASE = chrome.runtime.getURL("img/kits/");
-// Team code to next 5 fixtures
-var TEAM_ID_TO_NEXT_FIVE_FIXTURES={};
+// Team code to next 5 gameweeks
+var TEAM_ID_TO_NEXT_FIVE_GWS={};
 // Team code to true if away fixture in current gameweek else false
 var TEAM_AWAY_DICT={};
 // chosen gameweek 

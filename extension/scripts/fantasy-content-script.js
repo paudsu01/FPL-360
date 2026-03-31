@@ -12,45 +12,71 @@ var bench_observer;
 
 // Functions
 
-function create_next_few_fixtures_object(teamID, start){
+/*
+    Returns the next five GWS for a team
 
+    `TEAM_ID_TO_NEXT_FIVE_GWS` is mapping from teamID -> an array of length 5
+    Each of these arrays contains 5 additional arrays, one for each GW in order
+    Each GW array basically contains elements of type: {team, at_home, fdr}
+
+    e.g. if ARS is facing against BUR(burnley), an easy opponent, at Arsenal's home,
+    then the element will be {team: "BUR", at_home: true, fdr: 1}
+*/
+function get_next_five_gws(teamID, start){
+    // start is inclusive, teamdID is int
+   // inclusive as well
    let end = Math.min(start+4, 38)
 
-   if (teamID in TEAM_ID_TO_NEXT_FIVE_FIXTURES) return TEAM_ID_TO_NEXT_FIVE_FIXTURES[teamID];
+   // cache return
+   if (teamID in TEAM_ID_TO_NEXT_FIVE_GWS) return TEAM_ID_TO_NEXT_FIVE_GWS[teamID];
 
-   let fixtures_object = {};
+   // otherwise create the mapping one time and reuse it
+   // The code below will/should only run once.
+   Object.keys(ID_TEAM_DICT).forEach(teamID => {
+    TEAM_ID_TO_NEXT_FIVE_GWS[teamID] = [[], [], [], [], []]
+   })
 
-   while (start <= end){
-    fixtures_object[start] = []
-    start ++;
-   }
-
-   // go through all remaining fixtures and break if we find event "end + 1"
+   // Go through each fixture
    for (let fixture of ALL_FIXTURES){
+    if (!fixture.event) continue; // Skip games with no assigned Gameweek
 
-        if (fixture["team_h"] == teamID || fixture["team_a"] == teamID){
+    let fixture_gw = Number(fixture.event);
+    // only handle it if it is in the required range i.e. (start <= GW <= end)
+    if (fixture_gw >= start && fixture_gw <= end) {
+        let home_team_id = fixture["team_h"];
+        let away_team_id = fixture["team_a"];
 
-            if (Number(fixture.event) > end) break;
+        // short name for team. e.g MUN, WOL
+        let home_team_sname = ID_TEAM_DICT[home_team_id];
+        let away_team_sname = ID_TEAM_DICT[away_team_id];
 
-            let home_away = (fixture["team_h"] == teamID) ? "H" : "A"
-            let team = (fixture["team_h"] == teamID) ? ID_TEAM_DICT[fixture["team_a"]] : ID_TEAM_DICT[fixture["team_h"]];
-            let fdr = (fixture["team_h"] == teamID) ? fixture["team_h_difficulty"] : fixture["team_a_difficulty"];
-            fixtures_object[fixture["event"]].push([team, home_away, fdr])
+        // int value
+        let home_team_fdr = fixture["team_h_difficulty"];
+        let away_team_fdr = fixture["team_a_difficulty"];
 
-        }
+        TEAM_ID_TO_NEXT_FIVE_GWS[home_team_id][fixture_gw - start].push({
+            team: away_team_sname,
+            at_home: true,
+            fdr: home_team_fdr
+        })
+        TEAM_ID_TO_NEXT_FIVE_GWS[away_team_id][fixture_gw - start].push({
+            team: home_team_sname,
+            at_home: false,
+            fdr: away_team_fdr
+        })
     }
-    // save for next use 
-    TEAM_ID_TO_NEXT_FIVE_FIXTURES[teamID] = fixtures_object;
-
-    return fixtures_object;
+   }
+    return TEAM_ID_TO_NEXT_FIVE_GWS[teamID];
 }
 
 function create_next_few_fixtures_div_element(teamID, colorOnly = false){
 
     // function to set background color and text for each fixture div
-    let set_background_and_text_for_fixtures = (fixture_list, element)=>{
-                        element.innerText += `${fixture_list[0]} (${fixture_list[1]})`
-                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_list[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_list[2]][1]}; padding: 2px; border: 0.5px solid black; align-items:center;display:flex`
+    // fixture_info : ["TEAM", "H/A", FDR]
+    let set_background_and_text_for_fixtures = (fixture_info, element)=>{
+                        let home_away = (fixture_info.at_home) ? "H" : "A";
+                        element.innerText += `${fixture_info.team} (${home_away})`
+                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_info.fdr][0]}; color: ${FDR_TO_COLOR_CODE[fixture_info.fdr][1]}; padding: 2px; border: 0.5px solid black; align-items:center;display:flex`
                     }
 
     let set_background_and_append_div = (parent_div, color, fixture_info)=>{
@@ -59,30 +85,28 @@ function create_next_few_fixtures_div_element(teamID, colorOnly = false){
         third_div.classList.add("fixture-color-div");
 
         // add tooltip to div
+        let home_away = (fixture_info.at_home) ? "H" : "A";
         let span = document.createElement("span");
         span.classList.add("fixture-info");
         if (fixture_info){
-            span.style = `background : ${FDR_TO_COLOR_CODE[fixture_info[2]][0]}; color: ${FDR_TO_COLOR_CODE[fixture_info[2]][1]}; padding: 2px; border: 0.5px solid black`
-            span.innerText = `${fixture_info[0]} (${fixture_info[1]})`
+            span.style = `background : ${FDR_TO_COLOR_CODE[fixture_info.fdr][0]}; color: ${FDR_TO_COLOR_CODE[fixture_info.fdr][1]}; padding: 2px; border: 0.5px solid black`
+            span.innerText = `${fixture_info.team} (${home_away})`
         } else {
-            span.innerText = (fixture_info == null) ? "Blank" : `${fixture_info[0]} (${fixture_info[1]})`
+            span.innerText = "Blank";
             span.style = "background : black; color: white; padding: 2px; border: 0.5px solid black";
-
         }
         third_div.appendChild(span);
         parent_div.appendChild(third_div);
     }
-   // the fixtures object will be of the type:
-   // {24 : [["TEAM", "H", FDR]],
-   // 25 : [["TEAM", "A", FDR], ["TEAM", "H", FDR]], (double gameweek)
-   // 26 : [], (blank gameweek)
-   // ....
-    //}
-   let start= CHOSEN_GAMEWEEK;
+
+   let start = CHOSEN_GAMEWEEK;
    let increment = (colorOnly) ? 4 : 3
    let end = Math.min(CHOSEN_GAMEWEEK+increment, 38)
 
-   var fixtures_object = create_next_few_fixtures_object(teamID, start);
+   // `next_five_gws` is an array of length 5. Each element represents a GW
+   // Index 0 represents the next GW (CHOSEN_GAMEWEEK)
+   // Each GW is an array of elements of type: {team, at_home, fdr}
+   var next_five_gws = get_next_five_gws(teamID, start);
     
    var MAIN_DIV_ELEMENT = document.createElement("div");
    MAIN_DIV_ELEMENT.setAttribute("class", "upcoming-fixtures")
@@ -108,7 +132,7 @@ function create_next_few_fixtures_div_element(teamID, colorOnly = false){
             "display: grid; overflow: hidden; grid-template-columns: repeat(1, 1fr)");
     }
 
-    if (fixtures_object[start].length == 0) {
+    if (next_five_gws[start - CHOSEN_GAMEWEEK].length == 0) {
 
         if (!colorOnly){
             // set background to the grey for blank fixture
@@ -119,17 +143,17 @@ function create_next_few_fixtures_div_element(teamID, colorOnly = false){
         }
 
     } else {
-            for (let each_fixture of fixtures_object[start]){
+            for (let each_fixture of next_five_gws[start - CHOSEN_GAMEWEEK]){
 
-                if (fixtures_object[start].length == 1){
+                if (next_five_gws[start - CHOSEN_GAMEWEEK].length == 1){
                     if (colorOnly){
-                        set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0], each_fixture);
+                        set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture.fdr][0], each_fixture);
                     } else {
                         set_background_and_text_for_fixtures(each_fixture, secondary_div);
                     }
                 } else {
                     if (colorOnly){
-                            set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture[2]][0], each_fixture);
+                            set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture.fdr][0], each_fixture);
                     } else {
                         let div_element = document.createElement("div");
                         set_background_and_text_for_fixtures(each_fixture, div_element);
@@ -211,7 +235,7 @@ async function modifyDOM(modifySidebar=true){
     console.assert(all_buttons.length == 15, "DOM injection error: More than 15 buttons(players) found");
 
     // First goalie index is always 0; second goalie index is 1 for "transfers" page, 10 for the rest("my-team" and "event")
-    let secondGoalieValue = (URL_CODE == "transfers") ? 1 : 10;
+    let secondGoalieValue = (URL_CODE == "transfers") ? 1 : 11;
 
    // loop over each button. Each button is associated with a player in the team.
    for (let currentIndex=0; currentIndex < all_buttons.length; currentIndex += 1){
@@ -226,7 +250,6 @@ async function modifyDOM(modifySidebar=true){
         let imgElement = pictureElement.querySelector("img");
         let teamName = imgElement.getAttribute("alt");
         let team_short_name = TEAM_NAME_TO_SHORT_NAME_DICT[teamName];
-        console.log(`${teamName}: ${team_short_name}`);
 
         if (!(ALL_SETTINGS["away-home-jersey"] == false)){
             // no away jersey for goalies unfortunately :(
@@ -236,20 +259,21 @@ async function modifyDOM(modifySidebar=true){
                 modify_src_attributes(away_jersey_needed, pictureElement, team_short_name);
             }
         }
-        continue;
-
         if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
 
+            // inject their next 5 fixtures after modifying img attribute
             if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
-                // inject their next 5 fixtures after modifying img attribute if "my-team" page
                 try {
+                    // delete if exists since we will create the same element again
                     playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
                 var fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[team_short_name]);
-                playerElement.appendChild(fixtures_div);
+                // playerElement.appendChild(fixtures_div);
             }
+
+            continue;
         
             var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
             let player_id = get_player_id(player_web_name, TEAM_ID_DICT[team_short_name]);
@@ -291,7 +315,6 @@ async function modifyDOM(modifySidebar=true){
                 playerElement.appendChild(expected_points_div);
             }
         }
-
     }
 
     // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
