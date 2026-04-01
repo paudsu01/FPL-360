@@ -169,14 +169,16 @@ function waitForElement(parentElement, selector){
 
     return new Promise((resolve, reject)=>{
 
-        if (parentElement.querySelector(selector)) {
-            resolve();
+        let element = parentElement.querySelector(selector);
+        if (element) {
+            resolve(element);
         } else {
 
             const observer = new MutationObserver(mutations => {
-                if (parentElement.querySelector(selector)) {
+                let element = parentElement.querySelector(selector);
+                if (element) {
                     observer.disconnect();
-                    resolve();
+                    resolve(element);
                 }
             });
     

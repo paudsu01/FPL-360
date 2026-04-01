@@ -170,7 +170,7 @@ async function modify_DOM_for_sidebar(){
             */
             let picture_element = main_td.querySelector("picture");
             let info_div = picture_element.nextElementSibling;
-            let team_name = info_div.lastElementChild.querySelector("span").innerText;
+            let team_name = info_div.querySelector("span:nth-child(2)").querySelector("span").innerText;
             let team_short_name = TEAM_NAME_TO_SHORT_NAME_DICT[team_name];
             let player_web_name = info_div.querySelector("span").innerText;
 
@@ -183,7 +183,6 @@ async function modify_DOM_for_sidebar(){
             }
 
             if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
-                // create div for upcoming fixtures
                 let old_fixtures_div = info_div.querySelector(".fpl-fixtures");
                 if (old_fixtures_div) old_fixtures_div.remove();
 
@@ -192,7 +191,6 @@ async function modify_DOM_for_sidebar(){
             }
 
             if (!(ALL_SETTINGS['net-transfers'] == false)){
-                // create div for upcoming fixtures
                 let old_net_transfers_info = price_td.querySelector(".net-transfers-info");
                 if (old_net_transfers_info) old_net_transfers_info.remove();
 
@@ -447,24 +445,35 @@ function check_if_url_is_a_valid_link(){
     return false;
 }
 
+function mutation_observer_callback_sidebar_changes(){
+    // only interested if sidebar's DOM modified when in transfers page
+    if (trim_url(window.location.href) == CURRENT_URL){
+        // disconnect obersver if setup already
+        if (bench_observer) bench_observer.disconnect();
+
+        modify_DOM_for_sidebar().then(()=>{
+            // setup mutation observer to observe changes in sidebar DOM
+            setup_mutation_observer_for_sidebar_changes();
+        })
+    }
+}
+
 function setup_mutation_observer_for_sidebar_changes(){
 
-    bench_observer = new MutationObserver(()=>{
-        // only interested if sidebar's DOM modified when in transfers page
-         if (trim_url(window.location.href) == CURRENT_URL){
-            // disconnect obersver if setup already
-            if (bench_observer) bench_observer.disconnect();
+    const callback = debounce(mutation_observer_callback_sidebar_changes, 100);
+    bench_observer = new MutationObserver(callback);
 
-            modify_DOM_for_sidebar().then(()=>{
-                // setup mutation observer to observe changes in sidebar DOM
-                setup_mutation_observer_for_sidebar_changes();
-            })
-        }
-    });
-
+    /* 
+        <div> 
+            <table aria-label="Goalkeepers">... </table>
+            <table aria-label="Defenders">... </table>
+            <table aria-label="Midfielders">... </table>
+            <table aria-label="Forwards">... </table>
+        </div>
+    */
+    let sidebar_top_element = document.querySelector("table[aria-label]").parentElement;
     let config = {attributes:false, childList: true, subtree: true};
-    // bench_observer.observe(sidebar, config)
-    
+    bench_observer.observe(sidebar_top_element, config)
 }
 
 function setup_mutation_observer_for_url_change(){
