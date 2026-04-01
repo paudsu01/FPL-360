@@ -1,4 +1,4 @@
-var all_ids = ["away-home-jersey", "next-few-fixtures", "profit-loss", "net-transfers", "expected-points"];
+var all_ids = ["away-home-jersey", "next-few-fixtures", "net-transfers", "expected-points"];
 async function save_values_to_chrome_storage(){
 
     //   // Save it using the Chrome extension storage API.

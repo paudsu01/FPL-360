@@ -3,7 +3,7 @@
 var ALL_FIXTURES;
 // User's team id
 var USER_ID;
-// User's team data
+// User's team data (not used at the moment, but stored in case it will be necessary for future uses)
 var USER_DATA ={};
 // observer for pitch changes
 var pitch_observer;
@@ -276,23 +276,23 @@ async function modifyDOM(modifySidebar=true){
                 fixture_bar_element.parentElement.appendChild(addon_container_div);
             }
 
-            continue;
+            if (URL_CODE == 'transfers' && ALL_SETTINGS["net-transfers"] == true){
 
-            if (URL_CODE == 'transfers'){
-                // show net transfers data
-                let player_value_element = playerElement.querySelector("[class^='PitchElementData__ElementValue']");
-                try {
-                    player_value_element.removeChild(player_value_element.querySelector(".price-change-info"));}
-                catch (err) {
-                    // type error if query selector doesn't return a node
-                }
-                let netTransfersElement = create_net_transfers_and_profit_loss_element(player_id);
-                player_value_element.appendChild(netTransfersElement);
-
-            // the url code will now only be my-team so no need to check for that
+                    // The first span element is the one that contains the price tag
+                    let player_value_element = playerElement.querySelector("span");
+                    player_value_element.style.fontSize = "small";
+                    try {
+                        player_value_element.removeChild(player_value_element.querySelector(".net-transfers-info"));}
+                    catch (err) {
+                        // type error if query selector doesn't return a node
+                    }
+                    // show net transfers and profit loss data in the element
+                    let element = create_net_transfers_element(player_id, position="absolute");
+                    player_value_element.appendChild(element);
             }
         }
     }
+    return;
 
     // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
     // for the player search sidebar
@@ -345,94 +345,46 @@ function create_expected_points_div(expected_points){
     return main_div;
 }
 
-function get_profit_loss(playerID){
+function create_net_transfers_element(playerID, position="absolute"){
+    /*
+        <span class="net-transfers-info" style="position: absolute; color: green" title="Net transfers: 56,700">
+        ‹‹‹
+        </span>
+    */
+    
+    let net_transfers_element = document.createElement("span");
+    net_transfers_element.classList.add("net-transfers-info");
+    net_transfers_element.style.position = position;
 
-    if (!(USER_DATA.picks === undefined)){
-        for (let pick of USER_DATA.picks){
-            if (pick.element == playerID){
-                return (pick.selling_price - pick.purchase_price) / 10
-            }
+    let get_price_change_info_in_arrows = (net_transfers) => {
+        // Handle Positive Transfers (and 0)
+        if (net_transfers >= 0) {
+            if (net_transfers <= 5e3) return "‹";
+            if (net_transfers <= 5e4) return "‹‹";
+            if (net_transfers <= 1e5) return "‹‹‹";
+            return "‹‹‹‹";
+        } 
+        // Handle Negative Transfers
+        else {
+            if (net_transfers >= -5e3) return "›";
+            if (net_transfers >= -5e4) return "››";
+            if (net_transfers >= -1e5) return "›››";
+            return "››››";
         }
     }
-    return 0;
-}
-function create_profit_loss_element(playerID){
-
-    let profit_loss_element = document.createElement("div");
-    profit_loss_element.classList.add("profit-loss-info");
-    profit_loss_element.innerText = '(';
-    profit_loss_element.style = 'float:left';
-
-    let profit_loss = get_profit_loss(playerID);
-    let color = (profit_loss >= 0) ? "green" : "red";
-    let triangle = (profit_loss >= 0) ? "▲" : "▼";
-
-    let triangle_element = document.createElement("span");
-    triangle_element.style = `color: ${color}`
-    triangle_element.innerText = triangle;
-
-    let price_element = document.createElement("span");
-    price_element.innerText = profit_loss + ')';
-
-    profit_loss_element.appendChild(triangle_element);
-    profit_loss_element.appendChild(price_element);
-
-    return profit_loss_element;
-
-}
-function create_net_transfers_element(playerID, tooltip="span"){
-
-    let get_price_change_info_in_arrows = (net_transfers)=>{
-        if (Math.abs(net_transfers) <= 5e3) return "‹";
-        else if (Math.abs(net_transfers) <= 5e4) return "‹‹";
-        else if (Math.abs(net_transfers) <= 1e5) return "‹‹‹";
-        else return "‹‹‹‹";
-    }
-
-    let net_transfers_element = document.createElement("div");
-    net_transfers_element.classList.add("net-transfers-info");
     
     let player_data = PLAYER_ID_TO_DATA[playerID];
-    let transfers_in = player_data.transfers_in_event;
-    let transfers_out = player_data.transfers_out_event;
+    let net_transfers = player_data.transfers_in_event - player_data.transfers_out_event;
+    let color = (net_transfers >= 0) ? "greenyellow" : "red";
 
-    let color = ((transfers_in - transfers_out) >= 0) ? "green" : "red";
-    let degree = ((transfers_in - transfers_out) >= 0) ? 90 : -90;
-    net_transfers_element.style = `margin-left:2px;display: inline-block; rotate:${degree}deg; font-size:7px; margin-top:2px; float:left; letter-spacing:-1px; color:${color}`;
+    let net_transfers_formatted = new Intl.NumberFormat("en-IN", { maximumSignificantDigits: 3 }).format(net_transfers);
+    // will show on hover
+    net_transfers_element.setAttribute("title", `Net transfers: ${net_transfers_formatted}`);
 
-    let price_change_info = get_price_change_info_in_arrows(transfers_in-transfers_out);
-    net_transfers_element.innerText = price_change_info
-
-    // add tooltip
-    color = ((transfers_in - transfers_out) >= 0) ? "rgb(1, 252, 122)" : "red";
-    let tooltip_element = document.createElement(tooltip);
-    tooltip_element.classList.add("net-transfers-info-tooltip");
-        tooltip_element.style = `letter-spacing: normal;background : ${color}; color: ${(color == 'red') ? "white" : "black"}; padding: 2px; border: 0.5px solid black; rotate:${-degree}deg`
-        if (tooltip == "div") {
-            tooltip_element.style.width='120px'
-            tooltip_element.style.marginLeft='-40px';
-        }
-        tooltip_element.innerText = `Net transfers: ${transfers_in - transfers_out}`;
-    net_transfers_element.appendChild(tooltip_element);
+    net_transfers_element.innerText = get_price_change_info_in_arrows(net_transfers);
+    net_transfers_element.style.color = color;
 
     return net_transfers_element;
-
-}
-function create_net_transfers_and_profit_loss_element(playerID){
-    
-    let MAIN_DIV_ELEMENT = document.createElement("div");
-    MAIN_DIV_ELEMENT.classList.add("price-change-info");
-    MAIN_DIV_ELEMENT.style = 'display: inline-block; font-size:smaller;';
-
-    if (!(ALL_SETTINGS["profit-loss"] == false)){
-        var profit_loss_element = create_profit_loss_element(playerID);
-        MAIN_DIV_ELEMENT.appendChild(profit_loss_element);
-    }
-    if (!(ALL_SETTINGS["net-transfers"] == false)){
-        let net_transfers_element = create_net_transfers_element(playerID);
-        MAIN_DIV_ELEMENT.appendChild(net_transfers_element);
-    }
-    return MAIN_DIV_ELEMENT;
 }
 
 function find_chosen_gameweek(bootstrapResponse){
@@ -535,7 +487,7 @@ function setup_mutation_observer_for_url_change(){
 
 async function initContentScript(){
 
-    let all_ids = ["away-home-jersey", "next-few-fixtures", "profit-loss", "net-transfers", "expected-points"];
+    let all_ids = ["away-home-jersey", "next-few-fixtures", "net-transfers", "expected-points"];
     // if ALL_SETTINGS is empty, then every feature is turned on
     ALL_SETTINGS = await chrome.storage.local.get(all_ids);
 
@@ -556,27 +508,22 @@ async function initContentScript(){
     // create dict from player web name to id
     create_player_dict();
     
-    if (ALL_SETTINGS["profit-loss"] == false){
-        main()
-    } else{
+    // We need to access the user's ID using the API call using "https://fantasy.premierleague.com/api/me"
+    // However, we cannot fetch this from the content-script itself. So, we inject js code to the DOM to do this
+    // Look at inject.js for more details
 
-        // We need to access the user's ID using the API call using "https://fantasy.premierleague.com/api/me"
-        // However, we cannot fetch this from the content-script itself. So, we inject js code to the DOM to do this
-        // Look at inject.js for more details
-
-        // Add a listener which collects the user ID
-        window.addEventListener("message", (message)=>{
-            // make sure it is correct data type from `inject.js`
-            if (message.data.type == 'FPL_ME'){
-                USER_ID = message.data.user_id;
-                USER_DATA = message.data.user_data;
-                main();
-            }
-        })
-        // inject script that fetches the user id and sends us the message using `postMessage`
-        // Look at `inject.js`
-        injectJSFileToDOM("scripts/inject.js")
-    }
+    // Add a listener which collects the user ID
+    window.addEventListener("message", (message)=>{
+        // make sure it is correct data type from `inject.js`
+        if (message.data.type == 'FPL_ME'){
+            USER_ID = message.data.user_id;
+            USER_DATA = message.data.user_data;
+            main();
+        }
+    })
+    // inject script that fetches the user id and sends us the message using `postMessage`
+    // Look at `inject.js`
+    injectJSFileToDOM("scripts/inject.js")
 
     } catch (err){
         console.log(err);
