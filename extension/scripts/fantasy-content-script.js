@@ -230,6 +230,7 @@ async function modifyDOM(modifySidebar=true){
                 modify_src_attributes(away_jersey_needed, pictureElement, team_short_name);
             }
         }
+
         if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
         
             const show_next_few_fixtures = ALL_SETTINGS["next-few-fixtures"] == true;
@@ -258,10 +259,9 @@ async function modifyDOM(modifySidebar=true){
 
                 if (show_expected_points){
                     //  create div for expected points
-                    // TODO
-                    // let expected_points = PLAYER_ID_TO_DATA[player_id]["ep_next"];
-                    // let expected_points_div = create_expected_points_div(expected_points);
-                    // addon_container_div.appendChild(expected_points_div);
+                    let expected_points = PLAYER_ID_TO_DATA[player_id]["ep_next"];
+                    let expected_points_div = create_expected_points_div(expected_points);
+                    addon_container_div.appendChild(expected_points_div);
                 }
                 if (show_next_few_fixtures){
                     // create div for upcoming fixtures
@@ -317,27 +317,34 @@ async function modifyDOM(modifySidebar=true){
 }
 
 function create_expected_points_div(expected_points){
+    /* Here is what the div should look like
+        <div class="fpl-xp-box">
+            <div class="fpl-xp-header">xP</div>
+            <div class="fpl-xp-val">7.0</div>
+        </div>
+    */
 
     let main_div = document.createElement("div");
-    main_div.classList.add("expected-points-div");
-    main_div.style = "display: block"
+    main_div.setAttribute("class", "fpl-xp-box");
 
     let first_div = document.createElement("div");
-    first_div.classList.add("expected-points-xp-div");
-    first_div.innerText = "xP"
+    first_div.setAttribute("class", "fpl-xp-header");
+    first_div.innerText = "xP";
+    main_div.appendChild(first_div);
 
     let second_div = document.createElement("div");
-    second_div.classList.add("expected-points-value-div");
+    second_div.setAttribute("class", "fpl-xp-val");
+    second_div.innerText = expected_points;
+    main_div.appendChild(second_div);
+
+    // set background and color based on expected points
     let [background, color] = get_color_for_points(expected_points);
     second_div.style.background = background;
     second_div.style.color = color;
-    second_div.innerText = expected_points;
 
-    for (let div of [first_div, second_div]){
-        main_div.appendChild(div);
-    }
     return main_div;
 }
+
 function get_profit_loss(playerID){
 
     if (!(USER_DATA.picks === undefined)){

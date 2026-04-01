@@ -39,6 +39,7 @@
   left: 0;
   width: 100%;
   padding-bottom: 4px;
+  padding-left: 3px;
   z-index: 99;
   pointer-events: none; /* Allows clicking the jersey through the gaps */
 }
@@ -60,9 +61,7 @@
   text-align: center; 
 }
 .fpl-xp-val {
-  background: #01fc7a;
-  color: #000;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
   padding: 2px 4px;
   text-align: center;
