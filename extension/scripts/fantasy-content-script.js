@@ -139,61 +139,71 @@ function create_next_few_fixtures_div_element(teamID){
    return MAIN_DIV_ELEMENT;
 }
 
-function modify_DOM_for_sidebar(sidebar){
+async function modify_DOM_for_sidebar(){
+
+    await waitForElement(document.body, "table[aria-label]");
 
     // The player's are divided into their position and 
     // each position has a table of it's own where player info is present inside each tr tag
-    let all_tables = sidebar.querySelectorAll("table");
+    let all_tables = document.querySelectorAll("table[aria-label]");
     for (let table of all_tables){
         // the tr element for all players is inside the tbody of each table
         let all_tr_elements = table.querySelector("tbody").querySelectorAll("tr");
 
+        // Each tr element is for one player
         for (let tr_element of all_tr_elements){
-            
-            // The 2nd(1st index) td is what we are looking for (for image and other necessary stuff)
-            let required_td = tr_element.querySelectorAll("td")[1];
-            let teamCode = required_td.querySelector("span").innerText;
-            
-            // avoid goalies for jersey swap
-            if ((!(ALL_SETTINGS["away-home-jersey"] == false)) && required_td.querySelectorAll("span")[1].innerText !== "GKP"){
+            let tds = tr_element.querySelectorAll("td");
+            // The 1st(0st index) td is what we are looking for (to add image and fixtures)
+            let main_td = tds[0];
+            // The 2nd td is the one for price (net-transfers)
+            let price_td = tds[1];
+
+            /* 
+                <picture>...</picture>
+                <div> # Info div
+                    <span>Kelleher</span>
+                    <span>
+                        <span>Brentford</span>
+                        <span>GKP</span>
+                    </span>
+                </div>
+            */
+            let picture_element = main_td.querySelector("picture");
+            let info_div = picture_element.nextElementSibling;
+            let team_name = info_div.lastElementChild.querySelector("span").innerText;
+            let team_short_name = TEAM_NAME_TO_SHORT_NAME_DICT[team_name];
+            let player_web_name = info_div.querySelector("span").innerText;
+
+            // avoid goalies for jersey swap. Goalie's table has aria-label="Goalkeepers"
+            if ((!(ALL_SETTINGS["away-home-jersey"] == false)) && table.getAttribute("aria-label").toLowerCase() !== "goalkeepers"){
 
                 // Change img attribute to swap for away jersey as necessary
-                // TODO
-                modify_src_attributes(TEAM_AWAY_DICT[teamCode], required_td.querySelector("source"), required_td.querySelector("img"), teamCode);
-
+                let away_jersey_needed = team_short_name in TEAM_AWAY_DICT && TEAM_AWAY_DICT[team_short_name] === true;
+                modify_src_attributes(away_jersey_needed, picture_element, team_short_name);
             }
 
             if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
+                // create div for upcoming fixtures
+                let old_fixtures_div = info_div.querySelector(".fpl-fixtures");
+                if (old_fixtures_div) old_fixtures_div.remove();
 
-                let fixtures_div = required_td.querySelector(".upcoming-fixtures");
-                if (fixtures_div) fixtures_div.remove();
-
-                fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[teamCode]);
-                // inject the next five fixtures
-                required_td.appendChild(fixtures_div);
-
+                let fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[team_short_name]);
+                info_div.appendChild(fixtures_div);
             }
-
-            try {
-                tr_element.querySelector(".net-transfers-info").remove();
-            } catch (error) {
-            }
-            // inject the net transfers arrow
-            let name_div = required_td.querySelector("[class^='ElementInTable__Name']");
 
             if (!(ALL_SETTINGS['net-transfers'] == false)){
+                // create div for upcoming fixtures
+                let old_net_transfers_info = price_td.querySelector(".net-transfers-info");
+                if (old_net_transfers_info) old_net_transfers_info.remove();
 
-
-                let playerID = get_player_id(name_div.innerText, TEAM_ID_DICT[teamCode]);
-                let net_transfers_element = create_net_transfers_element(playerID, tooltip="div");
-                net_transfers_element.style.fontSize = '12px';
-                net_transfers_element.style.float = '';
-                required_td.nextSibling.appendChild(net_transfers_element);
+                let player_id = get_player_id(player_web_name, TEAM_ID_DICT[team_short_name]);
+                let element = create_net_transfers_element(player_id, position="relative");
+                element.style.fontSize = "large";
+                element.style.marginLeft = "8px";
+                price_td.appendChild(element);
             }
         }
-
     }
-
 }
 
 async function modifyDOM(modifySidebar=true){
@@ -226,7 +236,7 @@ async function modifyDOM(modifySidebar=true){
             // no away jersey for goalies unfortunately :(
             if (currentIndex != secondGoalieValue && currentIndex != 0) {
 
-                let away_jersey_needed = (team_short_name in TEAM_AWAY_DICT && TEAM_AWAY_DICT[team_short_name] === true) ? true : false;
+                let away_jersey_needed = team_short_name in TEAM_AWAY_DICT && TEAM_AWAY_DICT[team_short_name] === true;
                 modify_src_attributes(away_jersey_needed, pictureElement, team_short_name);
             }
         }
@@ -295,19 +305,13 @@ async function modifyDOM(modifySidebar=true){
 
     // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
     // for the player search sidebar
-
     // also need to add mutation observer to observe changes
-    // if (URL_CODE == 'transfers' && modifySidebar){
+    if (URL_CODE == 'transfers' && modifySidebar){
 
-    //     // Layout__Secondary
-    //     let sidebar = document.querySelector("[class^='SquadBase__PusherSecondary']");
-    //     modify_DOM_for_sidebar(sidebar);
-
-    //     // disconnect obersver if setup already
-    //     if (bench_observer) bench_observer.disconnect();
-    //     // setup mutation observer to observe changes in sidebar DOM
-    //     setup_mutation_observer_for_sidebar_changes(sidebar);
-    // }
+        await modify_DOM_for_sidebar();
+        // setup mutation observer to observe changes in sidebar DOM
+        setup_mutation_observer_for_sidebar_changes();
+    }
 
     // loop finished, setup mutation observer
     if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
@@ -443,23 +447,23 @@ function check_if_url_is_a_valid_link(){
     return false;
 }
 
-function setup_mutation_observer_for_sidebar_changes(sidebar){
+function setup_mutation_observer_for_sidebar_changes(){
 
     bench_observer = new MutationObserver(()=>{
         // only interested if sidebar's DOM modified when in transfers page
          if (trim_url(window.location.href) == CURRENT_URL){
-            let sidebar = document.querySelector("[class^='SquadBase__PusherSecondary']");
-            modify_DOM_for_sidebar(sidebar);
-
             // disconnect obersver if setup already
             if (bench_observer) bench_observer.disconnect();
-            // setup mutation observer to observe changes in sidebar DOM
-            setup_mutation_observer_for_sidebar_changes(sidebar);
+
+            modify_DOM_for_sidebar().then(()=>{
+                // setup mutation observer to observe changes in sidebar DOM
+                setup_mutation_observer_for_sidebar_changes();
+            })
         }
     });
 
     let config = {attributes:false, childList: true, subtree: true};
-    bench_observer.observe(sidebar, config)
+    // bench_observer.observe(sidebar, config)
     
 }
 
@@ -532,7 +536,6 @@ function mutation_observer_callback_pitch_changes(){
 
     if (trim_url(window.location.href) != CURRENT_URL) return;
     pitch_observer.disconnect();
-    console.log('fired');
     // Swap kits if needed after element discovered
     waitForElement(document.body, '[data-sponsor="default"]').then(()=>{
         modifyDOM(false);
