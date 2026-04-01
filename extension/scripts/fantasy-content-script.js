@@ -214,8 +214,8 @@ async function modifyDOM(modifySidebar=true){
         let pictureElement = playerElement.querySelector("picture");
 
         // Skip when a player is removed and there is no jersey there to know which the player is in transfers page
-        if (URL_CODE== "transfers" && pictureElement === undefined) continue;
-        if (pictureElement === undefined) throw new Error("No img element found in pitch");
+        if (URL_CODE == "transfers" && pictureElement === null) continue;
+        if (pictureElement === null) throw new Error("No img element found in pitch");
 
         let imgElement = pictureElement.querySelector("img");
         let teamName = imgElement.getAttribute("alt");
@@ -292,23 +292,22 @@ async function modifyDOM(modifySidebar=true){
             }
         }
     }
-    return;
 
     // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
     // for the player search sidebar
 
     // also need to add mutation observer to observe changes
-    if (URL_CODE == 'transfers' && modifySidebar){
+    // if (URL_CODE == 'transfers' && modifySidebar){
 
-        // Layout__Secondary
-        let sidebar = document.querySelector("[class^='SquadBase__PusherSecondary']");
-        modify_DOM_for_sidebar(sidebar);
+    //     // Layout__Secondary
+    //     let sidebar = document.querySelector("[class^='SquadBase__PusherSecondary']");
+    //     modify_DOM_for_sidebar(sidebar);
 
-        // disconnect obersver if setup already
-        if (bench_observer) bench_observer.disconnect();
-        // setup mutation observer to observe changes in sidebar DOM
-        setup_mutation_observer_for_sidebar_changes(sidebar);
-    }
+    //     // disconnect obersver if setup already
+    //     if (bench_observer) bench_observer.disconnect();
+    //     // setup mutation observer to observe changes in sidebar DOM
+    //     setup_mutation_observer_for_sidebar_changes(sidebar);
+    // }
 
     // loop finished, setup mutation observer
     if (URL_CODE == "transfers" || URL_CODE == 'my-team'){
@@ -377,9 +376,8 @@ function create_net_transfers_element(playerID, position="absolute"){
     let net_transfers = player_data.transfers_in_event - player_data.transfers_out_event;
     let color = (net_transfers >= 0) ? "greenyellow" : "red";
 
-    let net_transfers_formatted = new Intl.NumberFormat("en-IN", { maximumSignificantDigits: 3 }).format(net_transfers);
     // will show on hover
-    net_transfers_element.setAttribute("title", `Net transfers: ${net_transfers_formatted}`);
+    net_transfers_element.setAttribute("title", `Net transfers: ${net_transfers.toLocaleString()}`);
 
     net_transfers_element.innerText = get_price_change_info_in_arrows(net_transfers);
     net_transfers_element.style.color = color;
@@ -530,21 +528,25 @@ async function initContentScript(){
     }
 }
 
+function mutation_observer_callback_pitch_changes(){
+
+    if (trim_url(window.location.href) != CURRENT_URL) return;
+    pitch_observer.disconnect();
+    console.log('fired');
+    // Swap kits if needed after element discovered
+    waitForElement(document.body, '[data-sponsor="default"]').then(()=>{
+        modifyDOM(false);
+    })
+}
+
 function setup_mutation_observer_for_pitch_changes(){
 
     // setup observer to run modifyDOM function if player performs actions that modify the DOM inside the "[data-testid='pitch']" div element
     // These actions could be brining a substitue player to the starting lineup for example
-    pitch_observer = new MutationObserver(()=>{
-        // another observer callback handles route changes
-        if (trim_url(window.location.href) != CURRENT_URL) return;
-        pitch_observer.disconnect();
-        // Swap kits if needed after element discovered
-        waitForElement(document.body, "[data-testid='pitch']").then(()=>{
-            modifyDOM(false);
-        })
-    });
+    const callback = debounce(mutation_observer_callback_pitch_changes, 100);
+    pitch_observer = new MutationObserver(callback);
 
-    let pitchElement = document.querySelector("[data-testid='pitch']");
+    let pitchElement = document.querySelector('[data-sponsor="default"]');
     // Options for the observer (which mutations to observe)
     let config = { childList: true, subtree: true, attributes: true};
     pitch_observer.observe(pitchElement, config)

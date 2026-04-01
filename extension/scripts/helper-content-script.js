@@ -41,6 +41,20 @@ var FDR_TO_COLOR_CODE={
 var ALL_SETTINGS = {};
 // functions 
 
+/* 
+    Debouncing template for mutation observer callbacks
+    https://stackoverflow.com/questions/75988682/debounce-in-javascript
+*/
+function debounce(callback, delay) {
+  let timer
+  return function() {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      callback();
+    }, delay)
+  }
+}
+
 function trim_url(link){
 
     let url = link.split('?')[0].split('#')[0];
