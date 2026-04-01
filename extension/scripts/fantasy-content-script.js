@@ -304,7 +304,7 @@ async function modifyDOM(modifySidebar=true){
     // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
     // for the player search sidebar
     // also need to add mutation observer to observe changes
-    if (URL_CODE == 'transfers' && modifySidebar){
+    if (URL_CODE == 'transfers' && (ALL_SETTINGS["transfers-sidebar-modify"] == true) && modifySidebar){
 
         await modify_DOM_for_sidebar();
         // setup mutation observer to observe changes in sidebar DOM
@@ -498,7 +498,7 @@ function setup_mutation_observer_for_url_change(){
 
 async function initContentScript(){
 
-    let all_ids = ["away-home-jersey", "next-few-fixtures", "net-transfers", "expected-points"];
+    let all_ids = ["away-home-jersey", "next-few-fixtures", "net-transfers", "expected-points", "transfers-sidebar-modify"];
     // if ALL_SETTINGS is empty, then every feature is turned on
     ALL_SETTINGS = await chrome.storage.local.get(all_ids);
 
