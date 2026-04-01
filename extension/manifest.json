@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FPL 360",
-  "version": "1.2.4",
+  "version": "2.0.0",
   "description": "Complete FPL chrome extension",
   "icons": {
     "16": "img/icons/16x16.png",
@@ -18,12 +18,12 @@
       "css":["css/style.css"],
       "matches": ["https://fantasy.premierleague.com/*"],
       "run_at": "document_end"
-    },
+    }
+  ],
+  "web_accessible_resources": [
     {
-      "js": ["scripts/helper-content-script.js", "scripts/draft-content-script.js"],
-      "css":["css/style.css"],
-      "matches": ["https://draft.premierleague.com/*"],
-      "run_at": "document_end"
+      "resources": ["scripts/inject.js", "img/kits/*"],
+      "matches": ["https://fantasy.premierleague.com/*"]
     }
   ],
   "permissions": ["storage"]

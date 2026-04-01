@@ -1,58 +1,94 @@
-.fixture-color-div, .point-div{
-    position: relative;
+.fpl360-background-color{
+  background: linear-gradient(to right, rgb(2, 239, 255), rgb(0, 255, 135));
 }
 
-.fixture-info, .net-transfers-info-tooltip, .point-info{
-    visibility: hidden;
-    text-align: center;
-    width: 60px;
-    padding: 5px;
-    border-radius: 6px;
-    position: absolute;
-    z-index: 1;
-    top: 120%;
-    left: 50%;
-    margin-left: -30px;
-  }
-.net-transfers-info-tooltip{
-    margin-left : -12px;
-    font-size: 10px;
-  }
+/* Main Wrapper: Positions everything above the nameplate */
+.fpl-addon-container {
+  display: flex;
+  align-items: flex-end; /* Keeps xP and dots aligned at the bottom */
+  justify-content: space-between;
+  gap: 6px;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  padding-bottom: 4px;
+  padding-left: 3px;
+  z-index: 99;
+  pointer-events: none; /* Allows clicking the jersey through the gaps */
+}
 
-.fixture-color-div:hover .fixture-info {
-    visibility: visible;
-  }
-.point-div:hover .point-info {
-    visibility: visible;
-  }
-.net-transfers-info:hover .net-transfers-info-tooltip{
-    visibility: visible;
-  }
+/* Expected Points (xP) Box */
+.fpl-xp-box {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #000;
+  font-family: sans-serif;
+  line-height: 1;
+  pointer-events: auto;
+}
+.fpl-xp-header { 
+  background: #37003c; 
+  color: #fff; 
+  font-size: 8px; 
+  padding: 1px 3px; 
+  text-align: center; 
+}
+.fpl-xp-val {
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 4px;
+  text-align: center;
+}
 
-.expected-points-div{
-    display: block;
-    position: absolute;
-    border: 1px black solid;
-    top: 20%;
-    left: 10%;
-  }
-.expected-points-xp-div{
-    background: rgb(55, 0, 60);
-    color: white;
-    font-size: 10px;
-    padding: 2px;
-  }
+/* Fixtures Row */
+.fpl-fixtures {
+  display: flex; 
+  gap: 4px; 
+  pointer-events: auto;
+}
 
-.expected-points-value-div{
-    padding: 3px;
-    font-size: smaller;
-  }
+/* GW Column (Handles vertical stacking for DGW) */
+.fpl-gw-col {
+  display: flex;
+  flex-direction: column-reverse; /* Stacks 2nd fixture on top of 1st */
+  gap: 2px;
+  align-items: center;
+}
 
-  .net-transfers-info{
-    position: relative !important;
-    z-index: 1;
-  }
+/* Individual Dot */
+.fpl-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #000000;
+  cursor: help;
+  position: relative;
+}
 
-  .fpl360-background-color{
-    background: linear-gradient(to right, rgb(2, 239, 255), rgb(0, 255, 135));
-  }
+/* Tooltip on Hover */
+.fpl-dot:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 150%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #37003c;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.net-transfers-info
+{
+    display: inline-block;
+    rotate: 90deg;
+    letter-spacing: -2px;
+    margin-inline: 5%;
+    transform: scale(1.0, 1.5);
+    cursor: help;
+}

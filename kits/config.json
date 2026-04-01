@@ -1,0 +1,26 @@
+{
+    "_comment": "The teams mapping is their official FPL team short name -> sofifa.com team ID. Read GUIDE.md for more details",
+    "season": 26,
+    "teams" :{
+        "ARS": 1,
+        "AVL": 2,
+        "BUR": 1796,
+        "BOU": 1943,
+        "BRE": 1925,
+        "BHA": 1808,
+        "CHE": 5,
+        "CRY": 1799,
+        "EVE": 7,
+        "FUL": 144,
+        "LEE": 8,
+        "LIV": 9,
+        "MCI": 10,
+        "MUN": 11,
+        "NEW": 13,
+        "NFO": 14,
+        "SUN": 106,
+        "TOT": 18,
+        "WHU": 19,
+        "WOL": 110
+    }
+}
