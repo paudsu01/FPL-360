@@ -16,12 +16,6 @@ var URL_CODE = '';
 var CURRENT_URL = trim_url(window.location.href);
 // API response from "https://(fantasy|draft).premierleague.com/api/bootstrap-static"
 var BOOTSTRAP_RESPONSE;
-// store response from https://(fantasy|draft).premierleague.com/api/event/${GW}/live/
-// in one object, with the gameweeks as keys as the api response as values
-var LAST_FEW_EVENTS_DATA ={};
-var NEXT_FEW_EVENTS_DATA ={};
-var LAST_GAMEWEEK_WITH_DATA = null;
-var FARTHEST_GAMEWEEK_WITH_DATA = null;
 /* 
     e.g ID_TEAM_DICT : 1 -> 'ARS'
     e.g TEAM_ID_DICT : 'ARS' -> 1
@@ -69,12 +63,6 @@ function get_kit_path(team_short_name, is_away, size){
     let location = (is_away) ? "away" : "home";
     // For example, home kit for MCI 66w is stored in img/kits/MCI/home_66.webp
     return `${KIT_BASE}/${team_short_name}/${location}_${size}.webp`;
-}
-
-function get_player_event_data(gameweek, playerID){
-
-    let all_players = LAST_FEW_EVENTS_DATA[gameweek]["elements"];
-    return all_players.find((player)=>{return player.id == playerID});
 }
 
 // returns player's id based on their webName and teamName

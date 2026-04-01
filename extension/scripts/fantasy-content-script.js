@@ -277,16 +277,6 @@ async function modifyDOM(modifySidebar=true){
         
             var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
             let player_id = get_player_id(player_web_name, TEAM_ID_DICT[team_short_name]);
-            if (!(ALL_SETTINGS["last-few-gw"] == false)){
-                // inject their past 5 fixtures data after (Last few gameweeks points)
-                try {
-                    playerElement.removeChild(playerElement.querySelector(".past-fixtures"));}
-                catch (err) {
-                    // type error if query selector doesn't return a node
-                }
-                var past_fixtures_div = create_past_fixtures_div_element(player_id, TEAM_ID_DICT[team_short_name]);
-                playerElement.appendChild(past_fixtures_div);
-            }
 
             if (URL_CODE == 'transfers'){
                 // show net transfers data
@@ -451,79 +441,6 @@ function create_net_transfers_and_profit_loss_element(playerID){
     return MAIN_DIV_ELEMENT;
 }
 
-function create_past_fixtures_div_element(playerID, teamID){
-
-    let MAIN_DIV_ELEMENT = document.createElement("div");
-    MAIN_DIV_ELEMENT.classList.add("past-fixtures");
-    MAIN_DIV_ELEMENT.setAttribute("style",
-            `display: flex; box-sizing: border-box;`)
-
-    if (LAST_GAMEWEEK_WITH_DATA == null) return MAIN_DIV_ELEMENT;
-
-    let end = get_current_gameweek();
-    let start = LAST_GAMEWEEK_WITH_DATA;
-
-    while (start <= end){
-
-        let player_event_data = get_player_event_data(start, playerID);
-        let stats = player_event_data["stats"];
-        let points = stats.total_points;
-
-        // div to show points
-        let secondary_div = document.createElement("div");
-        secondary_div.classList.add("point-div");
-        let [background, color] = get_color_for_points(points);
-        secondary_div.style = `width: 17px; height: 17px; color: ${color}; background: ${background} ;margin: 2px auto; font-size: 12px; border: 0.1px solid black`
-        secondary_div.innerText = points;
-
-        // span element for tooltip when hovering over the point
-        let info = document.createElement("div");
-        info.classList.add("point-info");
-        info.style = `background : ${background}; color: ${color}; padding: 2px; border: 0.5px solid black`
-        // get fixture info : opposition team and home/away info
-        if (player_event_data.explain.length == 1){
-            var fixture = get_fixture(player_event_data["explain"][0].fixture, teamID)
-        } else {
-            var fixture = '';
-            for (let each_game of player_event_data.explain){
-                fixture = fixture + ', ' + get_fixture(each_game.fixture, teamID)
-            }
-        }
-        // show Gameweek, team, xG, xA
-        info.innerText = `GW ${start} ${fixture} xG ${stats.expected_goals} xA ${stats.expected_assists}`
-        secondary_div.appendChild(info);
- 
-        MAIN_DIV_ELEMENT.appendChild(secondary_div);
-        start ++;
-
-    }
-    return MAIN_DIV_ELEMENT;
-}
-
-function get_fixture(fixtureID, teamID){
-
-    for (let each_fixture of ALL_FIXTURES){
-        if (each_fixture.id == fixtureID){
-            return (each_fixture.team_h == teamID) ? `${ID_TEAM_DICT[each_fixture.team_a]}(A)` : `${ID_TEAM_DICT[each_fixture.team_h]}(H)`
-        }
-    }
-    return "Blank"
-}
-function get_player_event_data(gameweek, playerID){
-
-    let all_players = LAST_FEW_EVENTS_DATA[gameweek]["elements"];
-    return all_players.find((player)=>{return player.id == playerID});
-}
-function get_current_gameweek(){
-
-    let all_gameweeks = BOOTSTRAP_RESPONSE["events"];
-    for (let gameweek of all_gameweeks){
-        if (gameweek["is_current"] === true){
-            return Number(gameweek["id"]);
-        }
-    }
-
-}
 function find_chosen_gameweek(bootstrapResponse){
 
     let all_gameweeks = bootstrapResponse["events"];
@@ -624,7 +541,7 @@ function setup_mutation_observer_for_url_change(){
 
 async function initContentScript(){
 
-    let all_ids = ["away-home-jersey", "next-few-fixtures", "last-few-gw", "profit-loss", "net-transfers", "expected-points"];
+    let all_ids = ["away-home-jersey", "next-few-fixtures", "profit-loss", "net-transfers", "expected-points"];
     // if ALL_SETTINGS is empty, then every feature is turned on
     ALL_SETTINGS = await chrome.storage.local.get(all_ids);
 
@@ -637,19 +554,6 @@ async function initContentScript(){
             ])
     BOOTSTRAP_RESPONSE = await bootstrapResponse.json();
     ALL_FIXTURES = await FixturesResponse.json();
-
-    if (!(ALL_SETTINGS["last-few-gw"] == false)){
-
-        // fetch the last "five" events(gameweeks) data (will be less than five if gameweek_value < 5)
-        let gameweek_value = get_current_gameweek()   ;
-        let end = Math.max(1, gameweek_value - 4);
-        while (gameweek_value >= end){
-            let response = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek_value}/live/`);
-            LAST_FEW_EVENTS_DATA[gameweek_value] = await response.json();
-            LAST_GAMEWEEK_WITH_DATA = gameweek_value;
-            gameweek_value --;
-        }
-    }
 
     // make a dict of team id to team code and 
     // a dict that maps from team name to team code
