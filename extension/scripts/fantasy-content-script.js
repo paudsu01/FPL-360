@@ -69,39 +69,36 @@ function get_next_five_gws(teamID, start){
     return TEAM_ID_TO_NEXT_FIVE_GWS[teamID];
 }
 
-function create_next_few_fixtures_div_element(teamID, colorOnly = false){
+function create_next_few_fixtures_div_element(teamID){
+    /* The fixtures div element looks like this: 
+      <div class="fpl-fixtures">
+      
+          <div class="fpl-gw-col">
+              <div class="fpl-dot" style="background:#01fc7a" data-tip="GW 29: WHU (A)"></div>
+          </div>
 
-    // function to set background color and text for each fixture div
-    // fixture_info : ["TEAM", "H/A", FDR]
-    let set_background_and_text_for_fixtures = (fixture_info, element)=>{
-                        let home_away = (fixture_info.at_home) ? "H" : "A";
-                        element.innerText += `${fixture_info.team} (${home_away})`
-                        element.style = `background : ${FDR_TO_COLOR_CODE[fixture_info.fdr][0]}; color: ${FDR_TO_COLOR_CODE[fixture_info.fdr][1]}; padding: 2px; border: 0.5px solid black; align-items:center;display:flex`
-                    }
+         <div class="fpl-gw-col">
+           <div class="fpl-dot" style="background:#e7e7e7" data-tip="GW 30: LIV (H)"></div>
+           <div class="fpl-dot" style="background:#ff1751" data-tip="GW 30: BRE (A)"></div>
+         </div>
 
-    let set_background_and_append_div = (parent_div, color, fixture_info)=>{
-        let third_div = document.createElement("div");
-        third_div.style = `width: 15px; height: 15px; border-radius: 50%; background: ${color};margin: 2px auto;`
-        third_div.classList.add("fixture-color-div");
+         <div class="fpl-gw-col">
+           <div class="fpl-dot" style="background:#01fc7a" data-tip="GW 31: CRY (H)"></div>
+         </div>
+       </div>
+    */
 
-        // add tooltip to div
-        let home_away = (fixture_info.at_home) ? "H" : "A";
-        let span = document.createElement("span");
-        span.classList.add("fixture-info");
-        if (fixture_info){
-            span.style = `background : ${FDR_TO_COLOR_CODE[fixture_info.fdr][0]}; color: ${FDR_TO_COLOR_CODE[fixture_info.fdr][1]}; padding: 2px; border: 0.5px solid black`
-            span.innerText = `${fixture_info.team} (${home_away})`
-        } else {
-            span.innerText = "Blank";
-            span.style = "background : black; color: white; padding: 2px; border: 0.5px solid black";
-        }
-        third_div.appendChild(span);
-        parent_div.appendChild(third_div);
-    }
+   // Each dot is a circle that represents a fixture
+   let create_fpl_fixture_dot_element = (text, background_color) => {
+        let div = document.createElement("div");
+        div.setAttribute("class", "fpl-dot");
+        div.setAttribute("data-tip", text);
+        div.setAttribute("style", `background: ${background_color}`);
+        return div;
+   }
 
    let start = CHOSEN_GAMEWEEK;
-   let increment = (colorOnly) ? 4 : 3
-   let end = Math.min(CHOSEN_GAMEWEEK+increment, 38)
+   let end = Math.min(CHOSEN_GAMEWEEK+3, 38)
 
    // `next_five_gws` is an array of length 5. Each element represents a GW
    // Index 0 represents the next GW (CHOSEN_GAMEWEEK)
@@ -109,57 +106,30 @@ function create_next_few_fixtures_div_element(teamID, colorOnly = false){
    var next_five_gws = get_next_five_gws(teamID, start);
     
    var MAIN_DIV_ELEMENT = document.createElement("div");
-   MAIN_DIV_ELEMENT.setAttribute("class", "upcoming-fixtures")
-   // Hide if any secondary divs overflow
-   if (!colorOnly) {
-        MAIN_DIV_ELEMENT.setAttribute("style",
-            `display: grid; overflow: hidden; grid-template-columns: repeat(4, 1fr); font-size: 9px`)
-   } else {
-        MAIN_DIV_ELEMENT.setAttribute("style",
-            `display: flex; box-sizing: border-box;`)
-   }
-    
+   MAIN_DIV_ELEMENT.setAttribute("class", "fpl-fixtures");
 
+   // Loop over each gameweek
    while (start <= end){
 
+    // Create a GW column div
     let secondary_div = document.createElement("div");
-
-    if (colorOnly){
-        secondary_div.setAttribute("style",
-            "display: inline-block; flex: 1");
-    } else {
-        secondary_div.setAttribute("style",
-            "display: grid; overflow: hidden; grid-template-columns: repeat(1, 1fr)");
-    }
-
+    secondary_div.setAttribute("class", "fpl-gw-col");
+    
+    // If Blank gameweek
     if (next_five_gws[start - CHOSEN_GAMEWEEK].length == 0) {
-
-        if (!colorOnly){
-            // set background to the grey for blank fixture
-            secondary_div.style = `background: rgb(231, 231, 231); border: 0.5px solid black`;
-        } else {
-            // if color only: then create a new div element and insert with color black
-            set_background_and_append_div(secondary_div, "black", null);
-        }
+        let fpl_fixture_dot = create_fpl_fixture_dot_element(`GW ${start}: Blank`, "black");
+        secondary_div.appendChild(fpl_fixture_dot);
 
     } else {
             for (let each_fixture of next_five_gws[start - CHOSEN_GAMEWEEK]){
+                    let location = (each_fixture.at_home) ? "H" : "A";
+                    let background_color = FDR_TO_COLOR_CODE[each_fixture.fdr][0];
+                    let fpl_fixture_dot = create_fpl_fixture_dot_element(
+                        `GW ${start}: ${each_fixture.team} (${location})`, // text
+                        background_color // background color
+                    );
 
-                if (next_five_gws[start - CHOSEN_GAMEWEEK].length == 1){
-                    if (colorOnly){
-                        set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture.fdr][0], each_fixture);
-                    } else {
-                        set_background_and_text_for_fixtures(each_fixture, secondary_div);
-                    }
-                } else {
-                    if (colorOnly){
-                            set_background_and_append_div(secondary_div, FDR_TO_COLOR_CODE[each_fixture.fdr][0], each_fixture);
-                    } else {
-                        let div_element = document.createElement("div");
-                        set_background_and_text_for_fixtures(each_fixture, div_element);
-                        secondary_div.append(div_element);
-                    }
-                }
+                    secondary_div.appendChild(fpl_fixture_dot);
             }
     }
     MAIN_DIV_ELEMENT.appendChild(secondary_div);
@@ -198,7 +168,7 @@ function modify_DOM_for_sidebar(sidebar){
                 let fixtures_div = required_td.querySelector(".upcoming-fixtures");
                 if (fixtures_div) fixtures_div.remove();
 
-                fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[teamCode], true);
+                fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[teamCode]);
                 // inject the next five fixtures
                 required_td.appendChild(fixtures_div);
 
@@ -251,6 +221,7 @@ async function modifyDOM(modifySidebar=true){
         let teamName = imgElement.getAttribute("alt");
         let team_short_name = TEAM_NAME_TO_SHORT_NAME_DICT[teamName];
 
+        /* AWAY JERSEY */
         if (!(ALL_SETTINGS["away-home-jersey"] == false)){
             // no away jersey for goalies unfortunately :(
             if (currentIndex != secondGoalieValue && currentIndex != 0) {
@@ -260,23 +231,52 @@ async function modifyDOM(modifySidebar=true){
             }
         }
         if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
+        
+            const show_next_few_fixtures = ALL_SETTINGS["next-few-fixtures"] == true;
+            const show_expected_points = ALL_SETTINGS["expected-points"] == true;
 
-            // inject their next 5 fixtures after modifying img attribute
-            if (!(ALL_SETTINGS["next-few-fixtures"] == false)){
+            const fixture_bar_element = playerElement.querySelector('div[data-fixture-bar="true"]');
+            // player name span element is before the fixture bar div element
+            //  e.g
+            //      Raya
+            //      BRE(A)
+            const player_web_name = fixture_bar_element.parentElement.querySelector("span").innerText;
+            const player_id = get_player_id(player_web_name, TEAM_ID_DICT[team_short_name]);
+
+            /* FPL ADDON FOR FIXTURES AND xP */
+            if (show_next_few_fixtures || show_expected_points){
                 try {
                     // delete if exists since we will create the same element again
-                    playerElement.removeChild(playerElement.querySelector(".upcoming-fixtures"));}
+                    playerElement.removeChild(playerElement.querySelector(".fpl-addon-container"));}
                 catch (err) {
                     // type error if query selector doesn't return a node
                 }
-                var fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[team_short_name]);
-                // playerElement.appendChild(fixtures_div);
+
+                // This addon container is where we will add the divs for fixtures and expected-points
+                let addon_container_div = document.createElement("div");
+                addon_container_div.setAttribute("class", "fpl-addon-container");
+
+                if (show_expected_points){
+                    //  create div for expected points
+                    // TODO
+                    // let expected_points = PLAYER_ID_TO_DATA[player_id]["ep_next"];
+                    // let expected_points_div = create_expected_points_div(expected_points);
+                    // addon_container_div.appendChild(expected_points_div);
+                }
+                if (show_next_few_fixtures){
+                    // create div for upcoming fixtures
+                    var fixtures_div = create_next_few_fixtures_div_element(TEAM_ID_DICT[team_short_name]);
+                    addon_container_div.appendChild(fixtures_div);
+
+                    // change attribute to justify-content:right if no expected points div to show
+                    if (!show_expected_points) addon_container_div.style.justifyContent = "right";
+                }
+
+                // add the addon container div to the parent of the fixture div
+                fixture_bar_element.parentElement.appendChild(addon_container_div);
             }
 
             continue;
-        
-            var player_web_name = playerElement.querySelector("[class^='PitchElementData__ElementName']").innerText;
-            let player_id = get_player_id(player_web_name, TEAM_ID_DICT[team_short_name]);
 
             if (URL_CODE == 'transfers'){
                 // show net transfers data
@@ -290,19 +290,6 @@ async function modifyDOM(modifySidebar=true){
                 player_value_element.appendChild(netTransfersElement);
 
             // the url code will now only be my-team so no need to check for that
-            }
-
-            if (!(ALL_SETTINGS["expected-points"] == false)){
-
-                try {
-                    playerElement.removeChild(playerElement.querySelector(".expected-points-div"));}
-                catch (err) {
-                    // type error if query selector doesn't return a node
-                }
-                // get expected points
-                let expected_points = PLAYER_ID_TO_DATA[player_id]["ep_next"];
-                let expected_points_div = create_expected_points_div(expected_points);
-                playerElement.appendChild(expected_points_div);
             }
         }
     }
