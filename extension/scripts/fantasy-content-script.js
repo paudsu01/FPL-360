@@ -241,8 +241,8 @@ async function modifyDOM(modifySidebar=true){
 
         if (URL_CODE == 'my-team' || URL_CODE == 'transfers'){
         
-            const show_next_few_fixtures = ALL_SETTINGS["next-few-fixtures"] == true;
-            const show_expected_points = ALL_SETTINGS["expected-points"] == true;
+            const show_next_few_fixtures = !(ALL_SETTINGS["next-few-fixtures"] == false);
+            const show_expected_points = !(ALL_SETTINGS["expected-points"] == false);
 
             const fixture_bar_element = playerElement.querySelector('div[data-fixture-bar="true"]');
             // player name span element is before the fixture bar div element
@@ -284,7 +284,7 @@ async function modifyDOM(modifySidebar=true){
                 fixture_bar_element.parentElement.appendChild(addon_container_div);
             }
 
-            if (URL_CODE == 'transfers' && ALL_SETTINGS["net-transfers"] == true){
+            if (URL_CODE == 'transfers' && (!(ALL_SETTINGS["net-transfers"] == false))){
 
                     // The first span element is the one that contains the price tag
                     let player_value_element = playerElement.querySelector("span");
@@ -304,7 +304,7 @@ async function modifyDOM(modifySidebar=true){
     // if the user is on the transfers page, then need to add away jersey if necessary and fixtures
     // for the player search sidebar
     // also need to add mutation observer to observe changes
-    if (URL_CODE == 'transfers' && (ALL_SETTINGS["transfers-sidebar-modify"] == true) && modifySidebar){
+    if (URL_CODE == 'transfers' && (!(ALL_SETTINGS["transfers-sidebar-modify"] == false)) && modifySidebar){
 
         await modify_DOM_for_sidebar();
         // setup mutation observer to observe changes in sidebar DOM
